@@ -1,0 +1,5 @@
+# Rendered template files (generated dynamically)
+rendered/
+
+# Installation tracking
+.llmenv/installations.json
