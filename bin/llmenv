@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # LLM Environment Management Tool
-# Manages prompts, rules, and settings across different LLM tools
+# Uses symlinks to dynamically rendered templates for always-fresh configuration
 
 set -euo pipefail
 
@@ -11,6 +11,11 @@ LLMENV_ROOT="$(dirname "$SCRIPT_DIR")"
 # Configuration
 CLAUDE_DIR="$HOME/.claude"
 CURSOR_RULES_DIR=".cursor/rules"
+RENDERED_DIR="$LLMENV_ROOT/rendered"
+
+# Scripts
+RENDER_SCRIPT="$LLMENV_ROOT/scripts/render-template.sh"
+INSTALL_MANAGER="$LLMENV_ROOT/scripts/installation-manager.sh"
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,6 +38,7 @@ Usage: llmenv <command> [options]
 Commands:
   install [language]    Install base configuration or language-specific rules
   uninstall [language]  Remove configuration or language-specific rules
+  sync                  Regenerate all rendered templates (updates existing installs)
   list                  List available languages and current installations
   status               Show current configuration status
   help                 Show this help message
@@ -41,9 +47,16 @@ Examples:
   llmenv install           # Install base configuration for all tools
   llmenv install ruby      # Install Ruby-specific rules
   llmenv install typescript react  # Install multiple language rules
+  llmenv sync              # Update all existing installations with latest templates
   llmenv uninstall ruby   # Remove Ruby-specific rules
   llmenv list             # Show available languages
   llmenv status           # Show current setup
+
+Features:
+  - Always-fresh templates via symlinks to dynamically rendered files
+  - Easy updates with 'sync' command
+  - Automatic fallback to copying if symlinks not supported
+  - Installation tracking for easy management
 
 Supported Languages:
   ruby, typescript, react, terraform
@@ -52,11 +65,6 @@ Supported Tools:
   - Claude (global ~/.claude/CLAUDE.md)
   - Cursor (project-local .cursor/rules/)
 EOF
-}
-
-# Check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
 }
 
 # Create directory if it doesn't exist
@@ -68,46 +76,93 @@ ensure_dir() {
     fi
 }
 
-# Process include statements in template files
-process_includes() {
+# Test if symlinks are supported in a directory
+test_symlink_support() {
+    local target_dir="$1"
+    local test_file="$target_dir/.llmenv-symlink-test"
+    local test_link="$target_dir/.llmenv-symlink-test-link"
+    
+    # Create test file
+    echo "test" > "$test_file"
+    
+    # Try to create symlink
+    if ln -s "$test_file" "$test_link" 2>/dev/null; then
+        # Cleanup and return success
+        rm -f "$test_file" "$test_link"
+        return 0
+    else
+        # Cleanup and return failure
+        rm -f "$test_file" "$test_link"
+        return 1
+    fi
+}
+
+# Render a template with specified languages
+render_template() {
     local template_file="$1"
     local output_file="$2"
+    shift 2
+    local languages=("$@")
     
-    # Read the template and process includes
-    while IFS= read -r line; do
-        if [[ $line =~ ^[[:space:]]*\<!--[[:space:]]*include:[[:space:]]*([^[:space:]]+)[[:space:]]*--\> ]]; then
-            local include_path="${BASH_REMATCH[1]}"
-            local full_path="$(dirname "$template_file")/$include_path"
-            
-            if [[ -f "$full_path" ]]; then
-                cat "$full_path"
-                echo ""  # Add newline after include
-            else
-                log_warn "Include file not found: $full_path"
-                echo "$line"
-            fi
-        else
-            echo "$line"
-        fi
-    done < "$template_file" > "$output_file"
+    ensure_dir "$(dirname "$output_file")"
+    
+    "$RENDER_SCRIPT" "$template_file" "${languages[@]}" > "$output_file"
+    log_info "Rendered template: $output_file"
+}
+
+# Create symlink or copy as fallback
+link_or_copy() {
+    local source="$1"
+    local target="$2"
+    local description="$3"
+    
+    ensure_dir "$(dirname "$target")"
+    
+    # Remove existing file/link
+    if [[ -e "$target" ]] || [[ -L "$target" ]]; then
+        rm "$target"
+    fi
+    
+    # Try symlink first
+    if test_symlink_support "$(dirname "$target")"; then
+        ln -s "$source" "$target"
+        log_info "Symlinked $description: $target -> $source"
+    else
+        cp "$source" "$target"
+        log_warn "Copied $description (symlinks not supported): $target"
+    fi
+}
+
+# Regenerate all rendered templates
+regenerate_rendered() {
+    log_info "Regenerating all rendered templates..."
+    
+    # Regenerate Claude if installed
+    local claude_languages=($("$INSTALL_MANAGER" languages claude 2>/dev/null || echo ""))
+    if [[ ${#claude_languages[@]} -gt 0 ]] || "$INSTALL_MANAGER" get claude >/dev/null 2>&1; then
+        render_template "$LLMENV_ROOT/templates/claude/CLAUDE.md" "$RENDERED_DIR/claude/CLAUDE.md" "${claude_languages[@]}"
+        log_info "Regenerated Claude configuration"
+    fi
+    
+    # Regenerate Cursor if installed
+    local cursor_languages=($("$INSTALL_MANAGER" languages cursor 2>/dev/null || echo ""))
+    if [[ ${#cursor_languages[@]} -gt 0 ]] || "$INSTALL_MANAGER" get cursor >/dev/null 2>&1; then
+        render_template "$LLMENV_ROOT/templates/cursor/rules.md" "$RENDERED_DIR/cursor/rules.md" "${cursor_languages[@]}"
+        log_info "Regenerated Cursor rules"
+    fi
+    
+    log_info "Template regeneration complete!"
 }
 
 # Install base configuration
 install_base() {
     log_info "Installing base LLM environment configuration..."
     
-    # Install Claude configuration
+    # Render and install Claude configuration
     ensure_dir "$CLAUDE_DIR"
-    local claude_template="$LLMENV_ROOT/templates/claude/CLAUDE.md"
-    local claude_output="$CLAUDE_DIR/CLAUDE.md"
-    
-    if [[ -f "$claude_template" ]]; then
-        process_includes "$claude_template" "$claude_output"
-        log_info "Installed Claude configuration: $claude_output"
-    else
-        log_error "Claude template not found: $claude_template"
-        return 1
-    fi
+    render_template "$LLMENV_ROOT/templates/claude/CLAUDE.md" "$RENDERED_DIR/claude/CLAUDE.md"
+    link_or_copy "$RENDERED_DIR/claude/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md" "Claude configuration"
+    "$INSTALL_MANAGER" record claude "$CLAUDE_DIR/CLAUDE.md"
     
     log_info "Base configuration installed successfully!"
 }
@@ -126,19 +181,19 @@ install_language() {
     
     # Update Claude configuration
     local claude_config="$CLAUDE_DIR/CLAUDE.md"
-    if [[ -f "$claude_config" ]]; then
-        # Add language include to Claude config
-        local include_marker="<!-- language-includes-start -->"
-        local include_line="<!-- include: $LLMENV_ROOT/blocks/languages/$language.md -->"
+    if [[ -f "$claude_config" ]] || [[ -L "$claude_config" ]]; then
+        # Get current languages and add new one
+        local current_languages=($("$INSTALL_MANAGER" languages claude))
+        local new_languages=("${current_languages[@]}" "$language")
         
-        if ! grep -q "$include_line" "$claude_config"; then
-            # Insert the include after the marker
-            sed -i.bak "/$include_marker/a\\
-$include_line
-" "$claude_config"
-            rm "$claude_config.bak"
-            log_info "Added $language rules to Claude configuration"
-        fi
+        # Remove duplicates
+        local unique_languages=($(printf '%s\n' "${new_languages[@]}" | sort -u))
+        
+        # Regenerate Claude config with new languages
+        render_template "$LLMENV_ROOT/templates/claude/CLAUDE.md" "$RENDERED_DIR/claude/CLAUDE.md" "${unique_languages[@]}"
+        "$INSTALL_MANAGER" record claude "$CLAUDE_DIR/CLAUDE.md" "${unique_languages[@]}"
+        
+        log_info "Updated Claude configuration with $language rules"
     fi
     
     # Install Cursor rules if in a project directory
@@ -151,14 +206,17 @@ $include_line
             log_info "Added .gitignore to cursor rules directory"
         fi
         
-        # Create language-specific rules file
-        local cursor_rules="$CURSOR_RULES_DIR/$language-rules.md"
-        cat > "$cursor_rules" << EOF
-# $language Rules for Cursor
-
-@file:$LLMENV_ROOT/blocks/languages/$language.md
-EOF
-        log_info "Installed $language rules for Cursor: $cursor_rules"
+        # Get current cursor languages and add new one
+        local cursor_languages=($("$INSTALL_MANAGER" languages cursor 2>/dev/null || echo ""))
+        local new_cursor_languages=("${cursor_languages[@]}" "$language")
+        local unique_cursor_languages=($(printf '%s\n' "${new_cursor_languages[@]}" | sort -u))
+        
+        # Render and install Cursor rules
+        render_template "$LLMENV_ROOT/templates/cursor/rules.md" "$RENDERED_DIR/cursor/rules.md" "${unique_cursor_languages[@]}"
+        link_or_copy "$RENDERED_DIR/cursor/rules.md" "$CURSOR_RULES_DIR/rules.md" "Cursor rules"
+        "$INSTALL_MANAGER" record cursor "$CURSOR_RULES_DIR/rules.md" "${unique_cursor_languages[@]}"
+        
+        log_info "Installed $language rules for Cursor"
     fi
     
     log_info "$language rules installed successfully!"
@@ -170,7 +228,7 @@ cmd_install() {
         install_base
     else
         # Install base first if it doesn't exist
-        if [[ ! -f "$CLAUDE_DIR/CLAUDE.md" ]]; then
+        if [[ ! -f "$CLAUDE_DIR/CLAUDE.md" ]] && [[ ! -L "$CLAUDE_DIR/CLAUDE.md" ]]; then
             install_base
         fi
         
@@ -179,6 +237,13 @@ cmd_install() {
             install_language "$language"
         done
     fi
+}
+
+# Sync command - regenerate all templates
+cmd_sync() {
+    log_info "Syncing all LLM environment configurations..."
+    regenerate_rendered
+    log_info "All configurations synced successfully!"
 }
 
 # List available languages
@@ -194,27 +259,11 @@ cmd_list() {
     echo ""
     echo "Current installations:"
     
-    # Check Claude
-    if [[ -f "$CLAUDE_DIR/CLAUDE.md" ]]; then
-        echo "  Claude: ✓ Installed"
-        # Check for language includes
-        local includes=$(grep -o "blocks/languages/[^.]*\.md" "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null | sed 's|blocks/languages/||; s|\.md||' | sort -u)
-        if [[ -n "$includes" ]]; then
-            echo "    Languages: $includes"
-        fi
+    local installations=$("$INSTALL_MANAGER" list)
+    if [[ -n "$installations" ]]; then
+        echo "$installations" | sed 's/^/  /'
     else
-        echo "  Claude: ✗ Not installed"
-    fi
-    
-    # Check Cursor
-    if [[ -d "$CURSOR_RULES_DIR" ]]; then
-        echo "  Cursor: ✓ Installed"
-        local cursor_langs=$(ls "$CURSOR_RULES_DIR"/*-rules.md 2>/dev/null | sed 's|.*/||; s|-rules\.md||' | sort | tr '\n' ' ')
-        if [[ -n "$cursor_langs" ]]; then
-            echo "    Languages: $cursor_langs"
-        fi
-    else
-        echo "  Cursor: ✗ Not installed (run in project directory)"
+        echo "  No installations found"
     fi
 }
 
@@ -225,8 +274,18 @@ cmd_status() {
     echo ""
     
     echo "LLMENV_ROOT: $LLMENV_ROOT"
+    echo "Rendered templates: $RENDERED_DIR"
     echo "Claude config: $CLAUDE_DIR/CLAUDE.md"
     echo "Cursor rules: $CURSOR_RULES_DIR"
+    echo ""
+    
+    # Check if rendered directory exists and show status
+    if [[ -d "$RENDERED_DIR" ]]; then
+        echo "Rendered templates:"
+        find "$RENDERED_DIR" -name "*.md" | sed 's|^.*/|  |'
+    else
+        echo "No rendered templates found"
+    fi
     echo ""
     
     cmd_list
@@ -248,6 +307,9 @@ main() {
             shift
             log_warn "Uninstall command not yet implemented"
             exit 1
+            ;;
+        sync)
+            cmd_sync
             ;;
         list)
             cmd_list

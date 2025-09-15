@@ -1,6 +1,6 @@
-# LLM Environment Management v2
+# LLM Environment Management
 
-A modular system for managing prompts, rules, and settings across different LLM tools and programming languages. **Version 2** uses symlinks to dynamically rendered templates for always-fresh configuration that automatically updates when base templates change.
+A modular system for managing prompts, rules, and settings across different LLM tools and programming languages. Uses symlinks to dynamically rendered templates for always-fresh configuration that automatically updates when base templates change.
 
 ## Key Features
 
@@ -24,7 +24,7 @@ llmenv/
 │   ├── claude/            # Rendered Claude configurations
 │   └── cursor/            # Rendered Cursor rules
 ├── scripts/               # Helper scripts (template renderer, installation manager)
-└── bin/                   # Executable files (llmenv-v2)
+└── bin/                   # Executable files (llmenv)
 ```
 
 ## Installation
@@ -86,7 +86,7 @@ llmenv install react             # Adds React rules to existing configuration
 - React (hooks, performance, testing)
 - Terraform (infrastructure as code, security, testing)
 
-## Benefits Over v1
+## Benefits
 
 ✅ **No Sync Issues**: Templates always reflect latest changes  
 ✅ **Atomic Updates**: All installations update simultaneously  
