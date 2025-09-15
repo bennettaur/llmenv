@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allowDataAccess": true,
+    "allowNetworkAccess": true,
+    "allowExecutableExecution": true
+  },
+  "env": {
+    "LLMENV_ROOT": "<!-- env:LLMENV_ROOT -->"
+  },
+  "hooks": {
+    "postInstall": {
+      "command": "echo 'LLM environment configured'",
+      "description": "Post-installation hook"
+    }
+  },
+  "statusLine": {
+    "context": [
+      "<!-- include: ../../blocks/base/code-structure.md -->",
+      "<!-- language-includes-start -->",
+      "<!-- language-includes-end -->"
+    ]
+  },
+  "agents": {
+    "enabled": true,
+    "paths": [
+      "~/.claude/agents"
+    ]
+  }
+}

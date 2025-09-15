@@ -10,6 +10,8 @@ LLMENV_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Configuration
 CLAUDE_DIR="$HOME/.claude"
+CLAUDE_CODE_SETTINGS_DIR="$HOME/.claude"
+CLAUDE_CODE_AGENTS_DIR="$HOME/.claude/agents"
 CURSOR_RULES_DIR=".cursor/rules"
 RENDERED_DIR="$LLMENV_ROOT/rendered"
 
@@ -63,6 +65,7 @@ Supported Languages:
 
 Supported Tools:
   - Claude (global ~/.claude/CLAUDE.md)
+  - Claude Code (settings ~/.claude/settings.json, agents ~/.claude/agents/)
   - Cursor (project-local .cursor/rules/)
 EOF
 }
@@ -144,6 +147,22 @@ regenerate_rendered() {
         log_info "Regenerated Claude configuration"
     fi
     
+    # Regenerate Claude Code if installed
+    local claude_code_languages=($("$INSTALL_MANAGER" languages claude-code 2>/dev/null || echo ""))
+    if [[ ${#claude_code_languages[@]} -gt 0 ]] || "$INSTALL_MANAGER" get claude-code >/dev/null 2>&1; then
+        render_template "$LLMENV_ROOT/templates/claude-code/settings.json" "$RENDERED_DIR/claude-code/settings.json" "${claude_code_languages[@]}"
+        
+        # Regenerate agents
+        for agent_template in "$LLMENV_ROOT/templates/claude-code/agents"/*.md; do
+            if [[ -f "$agent_template" ]]; then
+                local agent_name="$(basename "$agent_template")"
+                render_template "$agent_template" "$RENDERED_DIR/claude-code/agents/$agent_name" "${claude_code_languages[@]}"
+            fi
+        done
+        
+        log_info "Regenerated Claude Code configuration and agents"
+    fi
+    
     # Regenerate Cursor if installed
     local cursor_languages=($("$INSTALL_MANAGER" languages cursor 2>/dev/null || echo ""))
     if [[ ${#cursor_languages[@]} -gt 0 ]] || "$INSTALL_MANAGER" get cursor >/dev/null 2>&1; then
@@ -163,6 +182,23 @@ install_base() {
     render_template "$LLMENV_ROOT/templates/claude/CLAUDE.md" "$RENDERED_DIR/claude/CLAUDE.md"
     link_or_copy "$RENDERED_DIR/claude/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md" "Claude configuration"
     "$INSTALL_MANAGER" record claude "$CLAUDE_DIR/CLAUDE.md"
+    
+    # Render and install Claude Code configuration
+    ensure_dir "$CLAUDE_CODE_SETTINGS_DIR"
+    ensure_dir "$CLAUDE_CODE_AGENTS_DIR"
+    
+    render_template "$LLMENV_ROOT/templates/claude-code/settings.json" "$RENDERED_DIR/claude-code/settings.json"
+    link_or_copy "$RENDERED_DIR/claude-code/settings.json" "$CLAUDE_CODE_SETTINGS_DIR/settings.json" "Claude Code settings"
+    "$INSTALL_MANAGER" record claude-code "$CLAUDE_CODE_SETTINGS_DIR/settings.json"
+    
+    # Install base agents
+    for agent_template in "$LLMENV_ROOT/templates/claude-code/agents"/*.md; do
+        if [[ -f "$agent_template" ]]; then
+            local agent_name="$(basename "$agent_template")"
+            render_template "$agent_template" "$RENDERED_DIR/claude-code/agents/$agent_name"
+            link_or_copy "$RENDERED_DIR/claude-code/agents/$agent_name" "$CLAUDE_CODE_AGENTS_DIR/$agent_name" "Claude Code agent $agent_name"
+        fi
+    done
     
     log_info "Base configuration installed successfully!"
 }
@@ -194,6 +230,31 @@ install_language() {
         "$INSTALL_MANAGER" record claude "$CLAUDE_DIR/CLAUDE.md" "${unique_languages[@]}"
         
         log_info "Updated Claude configuration with $language rules"
+    fi
+    
+    # Update Claude Code configuration
+    local claude_code_config="$CLAUDE_CODE_SETTINGS_DIR/settings.json"
+    if [[ -f "$claude_code_config" ]] || [[ -L "$claude_code_config" ]]; then
+        # Get current languages and add new one
+        local current_cc_languages=($("$INSTALL_MANAGER" languages claude-code))
+        local new_cc_languages=("${current_cc_languages[@]}" "$language")
+        
+        # Remove duplicates
+        local unique_cc_languages=($(printf '%s\n' "${new_cc_languages[@]}" | sort -u))
+        
+        # Regenerate Claude Code config and agents with new languages
+        render_template "$LLMENV_ROOT/templates/claude-code/settings.json" "$RENDERED_DIR/claude-code/settings.json" "${unique_cc_languages[@]}"
+        "$INSTALL_MANAGER" record claude-code "$CLAUDE_CODE_SETTINGS_DIR/settings.json" "${unique_cc_languages[@]}"
+        
+        # Regenerate agents with language-specific content
+        for agent_template in "$LLMENV_ROOT/templates/claude-code/agents"/*.md; do
+            if [[ -f "$agent_template" ]]; then
+                local agent_name="$(basename "$agent_template")"
+                render_template "$agent_template" "$RENDERED_DIR/claude-code/agents/$agent_name" "${unique_cc_languages[@]}"
+            fi
+        done
+        
+        log_info "Updated Claude Code configuration and agents with $language rules"
     fi
     
     # Install Cursor rules if in a project directory
@@ -276,13 +337,15 @@ cmd_status() {
     echo "LLMENV_ROOT: $LLMENV_ROOT"
     echo "Rendered templates: $RENDERED_DIR"
     echo "Claude config: $CLAUDE_DIR/CLAUDE.md"
+    echo "Claude Code settings: $CLAUDE_CODE_SETTINGS_DIR/settings.json"
+    echo "Claude Code agents: $CLAUDE_CODE_AGENTS_DIR/"
     echo "Cursor rules: $CURSOR_RULES_DIR"
     echo ""
     
     # Check if rendered directory exists and show status
     if [[ -d "$RENDERED_DIR" ]]; then
         echo "Rendered templates:"
-        find "$RENDERED_DIR" -name "*.md" | sed 's|^.*/|  |'
+        find "$RENDERED_DIR" -name "*.md" -o -name "*.json" | sed 's|^.*/|  |'
     else
         echo "No rendered templates found"
     fi

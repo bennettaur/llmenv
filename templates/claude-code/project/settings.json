@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allowDataAccess": true,
+    "allowNetworkAccess": false,
+    "allowExecutableExecution": true
+  },
+  "env": {
+    "NODE_ENV": "development",
+    "LLMENV_PROJECT": "true"
+  },
+  "hooks": {
+    "preCommit": {
+      "command": "npm run lint && npm run test",
+      "description": "Run linting and tests before commit"
+    },
+    "postCheckout": {
+      "command": "npm install",
+      "description": "Install dependencies after checkout"
+    }
+  },
+  "statusLine": {
+    "context": [
+      "Project-specific LLM environment settings",
+      "<!-- language-includes-start -->",
+      "<!-- language-includes-end -->"
+    ]
+  }
+}

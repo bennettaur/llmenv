@@ -18,7 +18,7 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1" >&2; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1" >&2; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
-# Process include statements and language conditionals
+# Process include statements, language conditionals, and environment variables
 process_template() {
     local template_file="$1"
     local languages=("${@:2}")  # Remaining args are enabled languages
@@ -114,7 +114,22 @@ process_template() {
         
         # Output line if not in a disabled language section
         if [[ "$current_language" == "" ]] || [[ "$language_enabled" == true ]]; then
-            echo "$line"
+            # Process environment variable substitutions: <!-- env:VAR_NAME -->
+            local processed_line="$line"
+            if [[ "$line" =~ \<!--[[:space:]]*env:([^[:space:]]+)[[:space:]]*--\> ]]; then
+                local env_var="${BASH_REMATCH[1]}"
+                local env_value=""
+                case "$env_var" in
+                    LLMENV_ROOT)
+                        env_value="$LLMENV_ROOT"
+                        ;;
+                    *)
+                        env_value="${!env_var:-}"
+                        ;;
+                esac
+                processed_line="${processed_line//<!-- env:$env_var -->/$env_value}"
+            fi
+            echo "$processed_line"
         fi
         
     done < "$template_file"
