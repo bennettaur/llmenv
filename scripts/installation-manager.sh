@@ -58,13 +58,15 @@ record_installation() {
     else
         # Fallback without jq - simple append/replace
         local new_entry="\"$tool\":{\"target_path\":\"$target_path\",\"languages\":$languages_json,\"installed_at\":\"$timestamp\"}"
-        
+        # Escape special characters for sed (especially forward slashes)
+        local escaped_entry=$(printf '%s\n' "$new_entry" | sed 's/[[\.*^$()+?{|\/]/\\&/g')
+
         if grep -q "\"$tool\":" "$INSTALLATIONS_FILE"; then
             # Replace existing entry (simple approach)
-            sed "s/\"$tool\":{[^}]*}/$new_entry/" "$INSTALLATIONS_FILE" > "$INSTALLATIONS_FILE.tmp" && mv "$INSTALLATIONS_FILE.tmp" "$INSTALLATIONS_FILE"
+            sed "s/\"$tool\":{[^}]*}/$escaped_entry/" "$INSTALLATIONS_FILE" > "$INSTALLATIONS_FILE.tmp" && mv "$INSTALLATIONS_FILE.tmp" "$INSTALLATIONS_FILE"
         else
             # Add new entry
-            sed 's/}$//; s/$/,'"$new_entry"'}/' "$INSTALLATIONS_FILE" | sed 's/^{,/{/' > "$INSTALLATIONS_FILE.tmp" && mv "$INSTALLATIONS_FILE.tmp" "$INSTALLATIONS_FILE"
+            sed 's/}$//; s/$/,'"$escaped_entry"'}/' "$INSTALLATIONS_FILE" | sed 's/^{,/{/' > "$INSTALLATIONS_FILE.tmp" && mv "$INSTALLATIONS_FILE.tmp" "$INSTALLATIONS_FILE"
         fi
     fi
 }

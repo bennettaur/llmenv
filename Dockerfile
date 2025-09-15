@@ -1,4 +1,4 @@
-FROM node:18-slim
+FROM node:22-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -20,9 +20,7 @@ ENV LLMENV_ROOT=/workspace/llmenv
 RUN npm install -g vibe-kanban
 
 # Install Claude Code CLI
-# Note: This is a placeholder - actual installation may vary
-# You may need to adjust this based on the actual Claude Code installation method
-RUN echo "Claude Code installation placeholder - update with actual installation command"
+RUN npm install -g @anthropic-ai/claude-code
 
 # Create working directory
 WORKDIR /workspace
@@ -46,10 +44,18 @@ RUN chmod +x /workspace/llmenv/bin/llmenv \
     && chmod +x /workspace/llmenv/docker/mcp-setup.sh \
     && ln -s /workspace/llmenv/bin/llmenv /usr/local/bin/llmenv
 
-# Pre-install Claude Code configuration in the container
-RUN cd /workspace/llmenv && ./bin/llmenv install \
-    && mkdir -p /workspace/llmenv/docker/default-claude-config \
-    && cp -r /root/.claude/* /workspace/llmenv/docker/default-claude-config/
+# Pre-render Claude Code configuration templates without installation tracking
+RUN cd /workspace/llmenv \
+    && mkdir -p /workspace/llmenv/rendered/claude /workspace/llmenv/rendered/claude-code/agents \
+    && ./scripts/render-template.sh ./templates/claude/CLAUDE.md > /workspace/llmenv/rendered/claude/CLAUDE.md \
+    && ./scripts/render-template.sh ./templates/claude-code/settings.json > /workspace/llmenv/rendered/claude-code/settings.json \
+    && for agent in ./templates/claude-code/agents/*.md; do \
+        ./scripts/render-template.sh "$agent" > "/workspace/llmenv/rendered/claude-code/agents/$(basename "$agent")"; \
+    done \
+    && mkdir -p /workspace/llmenv/docker/default-claude-config/agents \
+    && cp /workspace/llmenv/rendered/claude/CLAUDE.md /workspace/llmenv/docker/default-claude-config/ \
+    && cp /workspace/llmenv/rendered/claude-code/settings.json /workspace/llmenv/docker/default-claude-config/ \
+    && cp /workspace/llmenv/rendered/claude-code/agents/* /workspace/llmenv/docker/default-claude-config/agents/
 
 # Expose the port for vibe-kanban
 EXPOSE 9001

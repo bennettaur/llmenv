@@ -42,15 +42,6 @@ EOF
     log_info "Created Claude configuration volume directory (optional customization)"
 fi
 
-mkdir -p "$PROJECT_ROOT/docker/claude-config-dev"
-if [[ ! -f "$PROJECT_ROOT/docker/claude-config-dev/.gitkeep" ]]; then
-    cat > "$PROJECT_ROOT/docker/claude-config-dev/.gitkeep" << 'EOF'
-# Optional: Add custom Claude Code configuration files for development
-# This is used by the development container profile
-EOF
-    log_info "Created development Claude configuration volume directory"
-fi
-
 # Create example MCP server configuration
 if [[ ! -f "$PROJECT_ROOT/mcp-servers/README.md" ]]; then
     cat > "$PROJECT_ROOT/mcp-servers/README.md" << 'EOF'

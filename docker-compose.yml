@@ -22,26 +22,4 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
-    
-  # Optional: Add a development version that mounts more directories
-  vibe-kanban-dev:
-    build: .
-    ports:
-      - "9002:9001"
-    volumes:
-      - ./repos:/workspace/repos
-      - ./mcp-servers:/workspace/mcp-servers
-      - ./docker/claude-config-dev:/root/.claude
-      - .:/workspace/llmenv
-      # Mount additional development directories
-      - ~/.ssh:/root/.ssh:ro
-      - ~/.gitconfig:/root/.gitconfig:ro
-    environment:
-      - PORT=9001
-      - NODE_ENV=development
-      - LLMENV_ROOT=/workspace/llmenv
-    working_dir: /workspace/repos
-    stdin_open: true
-    tty: true
-    profiles:
-      - dev
+

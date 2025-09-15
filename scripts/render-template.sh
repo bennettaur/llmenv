@@ -127,7 +127,9 @@ process_template() {
                         env_value="${!env_var:-}"
                         ;;
                 esac
-                processed_line="${processed_line//<!-- env:$env_var -->/$env_value}"
+                # Escape special characters in env_value for safe replacement
+                local escaped_value="${env_value//\//\\/}"
+                processed_line="${processed_line//<!-- env:$env_var -->/$escaped_value}"
             fi
             echo "$processed_line"
         fi
