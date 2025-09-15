@@ -1,0 +1,3 @@
+# This directory is for user repositories
+# It's mounted into the Docker container as the working directory for vibe-kanban
+# Add your repositories here or create symlinks to existing ones

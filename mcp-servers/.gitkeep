@@ -1,0 +1,3 @@
+# This directory is for MCP server implementations
+# They will be automatically discovered and configured in the container
+# Create subdirectories for each MCP server with their implementation files

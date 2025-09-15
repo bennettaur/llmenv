@@ -1,0 +1,61 @@
+# Git and version control
+.git
+.gitignore
+
+# Node modules and dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker-related files
+.dockerignore
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Runtime directories (will be mounted)
+repos/*
+mcp-servers/*
+docker/claude-config/*
+docker/claude-config-dev/*
+
+# Generated/rendered files
+rendered/*
+.llmenv/*
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Temporary files
+tmp
+temp
+.tmp
+
+# Coverage and test reports
+coverage
+.nyc_output
+test-results
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation that's not needed in container
+README.md
+docs/
+*.md
+!docker/README.md

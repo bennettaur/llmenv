@@ -3,3 +3,13 @@ rendered/
 
 # Installation tracking
 .llmenv/installations.json
+
+# Docker working directories (user-specific repositories and servers)
+repos/*
+!repos/.gitkeep
+mcp-servers/*
+!mcp-servers/.gitkeep
+
+# Docker volume data (contains user-specific configurations)
+docker/claude-config/
+docker/claude-config-dev/
