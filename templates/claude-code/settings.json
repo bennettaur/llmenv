@@ -15,9 +15,8 @@
   },
   "statusLine": {
     "context": [
-      "<!-- include: ../../blocks/base/code-structure.md -->",
-      "<!-- language-includes-start -->",
-      "<!-- language-includes-end -->"
+      "Code structure and organization guidelines active",
+      "LLM environment management system enabled"
     ]
   },
   "agents": {

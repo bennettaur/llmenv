@@ -9,7 +9,14 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
     unzip \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install additional development tools
+RUN curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -o /usr/local/bin/yq \
+    && chmod +x /usr/local/bin/yq \
+    && curl -fsSL https://github.com/junegunn/fzf/releases/download/0.44.1/fzf-0.44.1-linux_amd64.tar.gz | tar -xz -C /usr/local/bin \
+    && curl -fsSL https://github.com/BurntSushi/ripgrep/releases/download/14.0.3/ripgrep-14.0.3-x86_64-unknown-linux-musl.tar.gz | tar -xz --strip-components=1 -C /usr/local/bin ripgrep-14.0.3-x86_64-unknown-linux-musl/rg
 
 # Set environment variables
 ENV PORT=9001
@@ -37,11 +44,13 @@ COPY bin/llmenv /workspace/llmenv/bin/llmenv
 COPY scripts/ /workspace/llmenv/scripts/
 COPY docker/configure-claude.sh /workspace/llmenv/docker/configure-claude.sh
 COPY docker/mcp-setup.sh /workspace/llmenv/docker/mcp-setup.sh
+COPY docker/entrypoint.sh /entrypoint.sh
 
 # Make scripts executable
 RUN chmod +x /workspace/llmenv/bin/llmenv \
     && chmod +x /workspace/llmenv/docker/configure-claude.sh \
     && chmod +x /workspace/llmenv/docker/mcp-setup.sh \
+    && chmod +x /entrypoint.sh \
     && ln -s /workspace/llmenv/bin/llmenv /usr/local/bin/llmenv
 
 # Pre-render Claude Code configuration templates without installation tracking
@@ -59,37 +68,6 @@ RUN cd /workspace/llmenv \
 
 # Expose the port for vibe-kanban
 EXPOSE 9001
-
-# Create entrypoint script
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-echo "================================="\n\
-echo "Vibe Kanban + Claude Code Container"\n\
-echo "================================="\n\
-\n\
-# Configure Claude Code if needed\n\
-echo "Configuring Claude Code..."\n\
-/workspace/llmenv/docker/configure-claude.sh\n\
-\n\
-# Setup MCP servers\n\
-echo "Setting up MCP servers..."\n\
-/workspace/llmenv/docker/mcp-setup.sh\n\
-\n\
-# Change to repos directory\n\
-cd /workspace/repos\n\
-\n\
-# Start vibe-kanban\n\
-echo ""\n\
-echo "Starting vibe-kanban on port $PORT..."\n\
-echo "Working directory: $(pwd)"\n\
-echo "Available repositories:"\n\
-ls -la . 2>/dev/null || echo "  No repositories found"\n\
-echo ""\n\
-\n\
-# Run vibe-kanban in foreground\n\
-exec vibe-kanban\n\
-' > /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
