@@ -2,6 +2,9 @@
 
 set -e
 
+# Activate mise environment
+eval "$(mise activate bash)"
+
 echo "================================="
 echo "Vibe Kanban + Claude Code Container"
 echo "================================="

@@ -1,4 +1,5 @@
-FROM node:22-slim
+ARG BASE_IMAGE=debian:latest
+FROM ${BASE_IMAGE}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -10,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     ca-certificates \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install additional development tools
@@ -23,19 +25,30 @@ ENV PORT=9001
 ENV NODE_ENV=production
 ENV LLMENV_ROOT=/workspace/llmenv
 
-# Install vibe-kanban globally
-RUN npm install -g vibe-kanban
+# Install mise for runtime management
+RUN curl https://mise.run | sh
+ENV PATH="/root/.local/bin:$PATH"
 
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
+# Install Node.js 22 via mise
+RUN mise install node@22 && mise global node@22
+
+# Install vibe-kanban and Claude Code globally
+RUN eval "$(mise activate bash)" && npm install -g vibe-kanban @anthropic-ai/claude-code
+
+# Create non-root user for security
+RUN groupadd --gid 1000 llmuser \
+    && useradd --uid 1000 --gid llmuser --shell /bin/bash --create-home llmuser \
+    && echo 'llmuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/llmuser \
+    && chmod 0440 /etc/sudoers.d/llmuser
 
 # Create working directory
 WORKDIR /workspace
 
 # Create directories for mounted repositories and configuration
 RUN mkdir -p /workspace/repos \
-    && mkdir -p /root/.claude \
-    && mkdir -p /workspace/mcp-servers
+    && mkdir -p /home/llmuser/.claude \
+    && mkdir -p /workspace/mcp-servers \
+    && chown -R llmuser:llmuser /workspace /home/llmuser
 
 # Copy llmenv configuration
 COPY templates/ /workspace/llmenv/templates/
@@ -46,12 +59,13 @@ COPY docker/configure-claude.sh /workspace/llmenv/docker/configure-claude.sh
 COPY docker/mcp-setup.sh /workspace/llmenv/docker/mcp-setup.sh
 COPY docker/entrypoint.sh /entrypoint.sh
 
-# Make scripts executable
+# Make scripts executable and set ownership
 RUN chmod +x /workspace/llmenv/bin/llmenv \
     && chmod +x /workspace/llmenv/docker/configure-claude.sh \
     && chmod +x /workspace/llmenv/docker/mcp-setup.sh \
     && chmod +x /entrypoint.sh \
-    && ln -s /workspace/llmenv/bin/llmenv /usr/local/bin/llmenv
+    && ln -s /workspace/llmenv/bin/llmenv /usr/local/bin/llmenv \
+    && chown -R llmuser:llmuser /workspace/llmenv
 
 # Pre-render Claude Code configuration templates without installation tracking
 RUN cd /workspace/llmenv \
@@ -64,10 +78,23 @@ RUN cd /workspace/llmenv \
     && mkdir -p /workspace/llmenv/docker/default-claude-config/agents \
     && cp /workspace/llmenv/rendered/claude/CLAUDE.md /workspace/llmenv/docker/default-claude-config/ \
     && cp /workspace/llmenv/rendered/claude-code/settings.json /workspace/llmenv/docker/default-claude-config/ \
-    && cp /workspace/llmenv/rendered/claude-code/agents/* /workspace/llmenv/docker/default-claude-config/agents/
+    && cp /workspace/llmenv/rendered/claude-code/agents/* /workspace/llmenv/docker/default-claude-config/agents/ \
+    && chown -R llmuser:llmuser /workspace/llmenv
+
+# Install mise for the non-root user
+USER llmuser
+RUN curl https://mise.run | sh
+ENV PATH="/home/llmuser/.local/bin:$PATH"
+RUN mise install node@22 && mise global node@22
+
+# Switch back to root for final setup
+USER root
 
 # Expose the port for vibe-kanban
 EXPOSE 9001
+
+# Switch to non-root user
+USER llmuser
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
