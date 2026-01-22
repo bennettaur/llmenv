@@ -10,8 +10,8 @@ services:
       - ./repos:/workspace/repos
       # Mount MCP servers directory for tool access
       - ./mcp-servers:/workspace/mcp-servers
-      # Mount Claude configuration for persistence (optional - will use defaults if not present)
-      - ./docker/claude-config:/root/.claude
+      # Mount Claude Code configuration (readonly)
+      - ./claude-code/.claude:/home/llmuser/.claude:ro
       # Mount llmenv directory for configuration updates
       - .:/workspace/llmenv
     environment:

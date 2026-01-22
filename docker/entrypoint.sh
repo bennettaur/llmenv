@@ -9,10 +9,6 @@ echo "================================="
 echo "Vibe Kanban + Claude Code Container"
 echo "================================="
 
-# Configure Claude Code if needed
-echo "Configuring Claude Code..."
-/workspace/llmenv/docker/configure-claude.sh
-
 # Setup MCP servers
 echo "Setting up MCP servers..."
 /workspace/llmenv/docker/mcp-setup.sh

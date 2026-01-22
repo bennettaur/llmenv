@@ -50,35 +50,13 @@ RUN mkdir -p /workspace/repos \
     && mkdir -p /workspace/mcp-servers \
     && chown -R llmuser:llmuser /workspace /home/llmuser
 
-# Copy llmenv configuration
-COPY templates/ /workspace/llmenv/templates/
-COPY blocks/ /workspace/llmenv/blocks/
-COPY bin/llmenv /workspace/llmenv/bin/llmenv
-COPY scripts/ /workspace/llmenv/scripts/
-COPY docker/configure-claude.sh /workspace/llmenv/docker/configure-claude.sh
+# Copy llmenv configuration scripts
 COPY docker/mcp-setup.sh /workspace/llmenv/docker/mcp-setup.sh
 COPY docker/entrypoint.sh /entrypoint.sh
 
-# Make scripts executable and set ownership
-RUN chmod +x /workspace/llmenv/bin/llmenv \
-    && chmod +x /workspace/llmenv/docker/configure-claude.sh \
-    && chmod +x /workspace/llmenv/docker/mcp-setup.sh \
+# Make scripts executable
+RUN chmod +x /workspace/llmenv/docker/mcp-setup.sh \
     && chmod +x /entrypoint.sh \
-    && ln -s /workspace/llmenv/bin/llmenv /usr/local/bin/llmenv \
-    && chown -R llmuser:llmuser /workspace/llmenv
-
-# Pre-render Claude Code configuration templates without installation tracking
-RUN cd /workspace/llmenv \
-    && mkdir -p /workspace/llmenv/rendered/claude /workspace/llmenv/rendered/claude-code/agents \
-    && ./scripts/render-template.sh ./templates/claude/CLAUDE.md > /workspace/llmenv/rendered/claude/CLAUDE.md \
-    && ./scripts/render-template.sh ./templates/claude-code/settings.json > /workspace/llmenv/rendered/claude-code/settings.json \
-    && for agent in ./templates/claude-code/agents/*.md; do \
-        ./scripts/render-template.sh "$agent" > "/workspace/llmenv/rendered/claude-code/agents/$(basename "$agent")"; \
-    done \
-    && mkdir -p /workspace/llmenv/docker/default-claude-config/agents \
-    && cp /workspace/llmenv/rendered/claude/CLAUDE.md /workspace/llmenv/docker/default-claude-config/ \
-    && cp /workspace/llmenv/rendered/claude-code/settings.json /workspace/llmenv/docker/default-claude-config/ \
-    && cp /workspace/llmenv/rendered/claude-code/agents/* /workspace/llmenv/docker/default-claude-config/agents/ \
     && chown -R llmuser:llmuser /workspace/llmenv
 
 # Install mise for the non-root user

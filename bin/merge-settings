@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+"""
+Merge Claude Code settings files with deep recursive merge.
+
+This script merges settings files in order starting with a base file.
+
+Usage:
+  1. Profile mode: merge-settings --profile personal
+     Merges base with settings.personal.json
+  
+  2. Explicit files: merge-settings file1.json file2.json
+     Merges base with file1.json, then file2.json
+
+Merge rules:
+- Nested objects: deep recursive merge
+- Arrays: concatenate
+- Primitives: last value wins
+"""
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any, Dict, List
+
+
+def expand_path(path: str) -> Path:
+    """Expand ~ and environment variables in path."""
+    return Path(os.path.expanduser(os.path.expandvars(path)))
+
+
+def deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Deep merge two dictionaries.
+
+    Rules:
+    - Nested dicts: recursively merge
+    - Lists: concatenate
+    - Other values: override wins
+    """
+    result = base.copy()
+
+    for key, value in override.items():
+        if key not in result:
+            result[key] = value
+        elif isinstance(value, dict) and isinstance(result[key], dict):
+            # Recursively merge nested dicts
+            result[key] = deep_merge(result[key], value)
+        elif isinstance(value, list) and isinstance(result[key], list):
+            # Concatenate arrays
+            result[key] = result[key] + value
+        else:
+            # Override primitive values
+            result[key] = value
+
+    return result
+
+
+def load_json_file(file_path: Path, verbose: bool = False) -> Dict[str, Any]:
+    """Load JSON file, return empty dict if file doesn't exist."""
+    if not file_path.exists():
+        if verbose:
+            print(f"File not found, skipping: {file_path}", file=sys.stderr)
+        return {}
+
+    try:
+        with open(file_path, 'r') as f:
+            content = json.load(f)
+            if verbose:
+                print(f"Loaded: {file_path}", file=sys.stderr)
+            return content
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON in {file_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def save_json_file(file_path: Path, data: Dict[str, Any], dry_run: bool = False, verbose: bool = False):
+    """Save merged data to JSON file."""
+    if dry_run:
+        print(f"\nDry run - would write to: {file_path}")
+        print(json.dumps(data, indent=2))
+        return
+
+    try:
+        # Ensure parent directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.write('\n')  # Add trailing newline
+
+        if verbose:
+            print(f"Wrote merged settings to: {file_path}", file=sys.stderr)
+    except Exception as e:
+        print(f"Error writing to {file_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Merge Claude Code settings files with deep recursive merge',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use a profile (merges base with settings.personal.json)
+  merge-settings --profile personal
+
+  # Just output base settings
+  merge-settings --profile base
+
+  # Merge specific files in order
+  merge-settings custom1.json custom2.json
+
+  # Verbose output showing merge operations
+  merge-settings --profile personal --verbose
+
+  # Dry run to preview merged output
+  merge-settings --profile wealthsimple --dry-run
+        """
+    )
+
+    parser.add_argument(
+        'files',
+        nargs='*',
+        help='JSON files to merge in order (after base)'
+    )
+    parser.add_argument(
+        '-o', '--output',
+        type=str,
+        default='./settings.json',
+        help='Output file (default: ./settings.json)'
+    )
+    parser.add_argument(
+        '-b', '--base',
+        type=str,
+        default='./settings.base.json',
+        help='Base settings file (default: ./settings.base.json)'
+    )
+    parser.add_argument(
+        '-p', '--profile',
+        type=str,
+        help='Profile name (e.g., personal, wealthsimple). Will merge settings.<profile>.json with base'
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Print merged output without writing to file'
+    )
+    parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        help='Show detailed merge operations'
+    )
+
+    args = parser.parse_args()
+
+    # Check for conflicting arguments
+    if args.profile and args.files:
+        print("Error: Cannot use both --profile and file arguments", file=sys.stderr)
+        sys.exit(1)
+
+    if not args.profile and not args.files:
+        print("Error: Must specify either --profile or file arguments", file=sys.stderr)
+        sys.exit(1)
+
+    # Expand paths
+    output_path = expand_path(args.output)
+    base_path = expand_path(args.base)
+
+    # Determine files to merge
+    files_to_merge: List[Path] = []
+    
+    if args.profile:
+        if args.profile == 'base':
+            # Just output base settings, no additional merging
+            pass
+        else:
+            # Find settings.<profile>.json in same directory as base
+            profile_file = base_path.parent / f"settings.{args.profile}.json"
+            files_to_merge.append(profile_file)
+    else:
+        # Use explicitly provided files
+        files_to_merge = [expand_path(f) for f in args.files]
+
+    if args.verbose:
+        print("=== Merge Settings ===", file=sys.stderr)
+        print(f"Base:   {base_path}", file=sys.stderr)
+        if args.profile == 'base':
+            print("Profile: base (no additional merging)", file=sys.stderr)
+        elif args.profile:
+            print(f"Profile: {args.profile}", file=sys.stderr)
+        for i, f in enumerate(files_to_merge, 1):
+            print(f"File {i}:  {f}", file=sys.stderr)
+        print(f"Output: {output_path}", file=sys.stderr)
+        print("", file=sys.stderr)
+
+    # Load base file
+    merged = load_json_file(base_path, verbose=args.verbose)
+
+    if not merged:
+        print(f"Error: Base settings file not found or empty: {base_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # Merge additional files in order
+    for file_path in files_to_merge:
+        settings = load_json_file(file_path, verbose=args.verbose)
+        if settings:
+            merged = deep_merge(merged, settings)
+            if args.verbose:
+                print(f"Merged: {file_path.name}", file=sys.stderr)
+        elif args.verbose:
+            print(f"Skipped (not found): {file_path.name}", file=sys.stderr)
+
+    # Save or print result
+    if args.verbose:
+        print("", file=sys.stderr)
+
+    save_json_file(output_path, merged, dry_run=args.dry_run, verbose=args.verbose)
+
+    if not args.dry_run and args.verbose:
+        print("\n✓ Settings merged successfully", file=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()

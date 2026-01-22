@@ -1,0 +1,136 @@
+{
+  "permissions": {
+    "allow": [
+      "--- SKILLS ---",
+      "Skill(superpowers:*)",
+      "Skill(reading-jira-tickets:*)",
+      "--- MCPs ---",
+      "mcp__context7",
+      "mcp__sourcegraph",
+      "mcp__git-commit",
+      "--- READ-ONLY FILE OPERATIONS ---",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(less:*)",
+      "Bash(ls:*)",
+      "Bash(pwd:*)",
+      "Bash(which:*)",
+      "Bash(whereis:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(tree:*)",
+      "--- OTHER FILE OPERATIONS ---",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(pwd:*)",
+      "Bash(cd:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(touch:*)",
+      "--- SEARCH OPERATIONS ---",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(fd:*)",
+      "--- UTILITIES ---",
+      "Bash(jq:*)",
+      "Bash(echo:*)",
+      "--- GIT ---",
+      "Bash(git:*)",
+      "--- GITHUB CLI ---",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh run view:*)",
+      "--- JIRA CLI ---",
+      "Bash(acli jira workitem view:*)",
+      "Bash(acli jira workitem comment list:*)",
+      "Bash(acli jira workitem search:*)",
+      "--- DEVELOPMENT ---",
+      "Bash(node:*)",
+      "Bash(yarn:*)",
+      "Bash(eslint:*)",
+      "Bash(prettier:*)",
+      "Bash(pnpm:*)"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Read(secrets/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Bash(env:*)"
+    ],
+    "ask": [
+      "Bash(yarn add:*)",
+      "Bash(pnpm add:*)",
+      "Bash(find:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "env": {
+    "LLMENV_ROOT": "/Users/mbennett/dev/bennettaur/llmenv"
+  },
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay ~/.claude/notification-sound/protoss_dragoon_03.mp3"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay ~/.claude/notification-sound/probe_notify.mp3"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh",
+    "padding": 0
+  },
+  "agents": {
+    "enabled": true,
+    "paths": [
+      "~/.claude/agents"
+    ]
+  },
+  "skills": {
+    "enabled": true,
+    "paths": [
+      "~/.claude/skills"
+    ]
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "*.github.com",
+        "*.atlassian.com"
+      ]
+    },
+    "allowUnixSockets": [
+      "-- used by nx Daemon --",
+      "/private/tmp/claude/**"
+    ]
+  }
+}

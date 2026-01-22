@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "superpowers@ws-claude-marketplace": true
+  },
+  "extraKnownMarketplaces": {
+    "ws-claude-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "wealthsimple/ws-claude-marketplace"
+      }
+    }
+  }
+}

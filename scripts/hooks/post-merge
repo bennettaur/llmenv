@@ -1,0 +1,19 @@
+#!/bin/bash
+# Auto-merge Claude Code settings after git operations
+# This hook runs after git pull, git merge, etc.
+
+set -e
+
+# Check if base settings file exists (indicates stow installation is active)
+if [[ -f ~/.claude/settings.base.json ]]; then
+    echo "Merging Claude Code settings..."
+
+    # Check if merge-settings is available in PATH
+    if command -v merge-settings &> /dev/null; then
+        merge-settings --verbose
+        echo "✓ Settings merged successfully"
+    else
+        echo "Warning: merge-settings command not found in PATH" >&2
+        echo "Please ensure llmenv/bin is in your PATH or run merge-settings manually" >&2
+    fi
+fi

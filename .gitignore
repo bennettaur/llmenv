@@ -1,8 +1,7 @@
-# Rendered template files (generated dynamically)
-rendered/
-
-# Installation tracking
-.llmenv/installations.json
+# Generated settings (merged from base/personal/work)
+claude-code/.claude/settings.json
+claude-code/.claude/settings.wealthsimple.json
+claude-code/.claude/settings.*.local.json
 
 # Docker working directories (user-specific repositories and servers)
 repos/*
@@ -10,6 +9,8 @@ repos/*
 mcp-servers/*
 !mcp-servers/.gitkeep
 
-# Docker volume data (contains user-specific configurations)
+# Legacy files (can be removed after migration)
+rendered/
+.llmenv/installations.json
 docker/claude-config/
 docker/claude-config-dev/

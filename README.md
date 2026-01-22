@@ -1,95 +1,287 @@
 # LLM Environment Management
 
-A modular system for managing prompts, rules, and settings across different LLM tools and programming languages. Uses symlinks to dynamically rendered templates for always-fresh configuration that automatically updates when base templates change.
+A modular system for managing Claude Code configuration using GNU stow for symlink management and layered settings merging. Provides a clean separation between base, personal, and work configurations.
 
 ## Key Features
 
-🔗 **Symlink-based**: Configurations link to dynamically rendered files  
-🔄 **Always Fresh**: Templates are re-rendered on demand, ensuring consistency  
-📦 **Modular**: Reusable building blocks for different aspects of development  
-🎯 **Language-specific**: Easy installation of language-specific rules  
-⚡ **Easy Updates**: Single `sync` command updates all existing installations  
+🔗 **Stow-based**: Simple symlink management using industry-standard tool
+🎯 **Layered Settings**: Base → Personal → Work configuration merging
+📦 **Modular**: Organized skills, agents, and commands
+🔄 **Auto-merge**: Git hooks automatically merge settings after pulls
+🐳 **Docker-ready**: Mount readonly configuration in containers
 
 ## Directory Structure
 
 ```
 llmenv/
-├── blocks/                 # Reusable prompt building blocks
-│   ├── base/              # Common prompts (code-structure, pr-guidelines, etc.)
-│   └── languages/         # Language-specific prompts (ruby, typescript, react, etc.)
-├── templates/             # Tool-specific template files with include directives
-│   ├── claude/            # Claude.md templates
-│   └── cursor/            # Cursor rules templates
-├── rendered/              # Dynamically generated files (gitignored)
-│   ├── claude/            # Rendered Claude configurations
-│   └── cursor/            # Rendered Cursor rules
-├── scripts/               # Helper scripts (template renderer, installation manager)
-└── bin/                   # Executable files (llmenv)
+├── claude-code/           # Stow package for Claude Code configuration
+│   └── .claude/           # Configuration directory (stowed to ~/.claude/)
+│       ├── CLAUDE.md                      # Consolidated guidelines
+│       ├── settings.base.json             # Base configuration (committed)
+│       ├── settings.personal.json         # Personal overrides (committed)
+│       ├── settings.wealthsimple.json     # Work config (gitignored)
+│       ├── settings.json                  # Merged output (gitignored, generated)
+│       ├── skills/                        # Language-specific skills
+│       │   ├── typescript.md
+│       │   ├── ruby.md
+│       │   ├── react.md
+│       │   └── terraform.md
+│       ├── agents/                        # Specialized agents
+│       │   ├── code-reviewer.md
+│       │   ├── pr-helper.md
+│       │   ├── typescript-expert.md
+│       │   └── ... (9 total)
+│       └── commands/
+│           └── pr-wrapup.md
+├── bin/
+│   └── merge-settings     # Python script for recursive settings merge
+├── scripts/
+│   └── hooks/
+│       └── post-merge     # Git hook for auto-merge
+└── docker/                # Docker setup files
 ```
 
 ## Installation
 
-1. **Setup the CLI tool**:
-   ```bash
-   ./install.sh
-   ```
+### 1. Install Configuration with Stow
 
-2. **Install base configuration**:
-   ```bash
-   llmenv install
-   ```
+Use GNU stow to symlink the `.claude` directory to your home directory:
 
-3. **Install language-specific rules**:
-   ```bash
-   llmenv install ruby typescript react
-   ```
+```bash
+# From the llmenv directory
+cd /path/to/llmenv
+stow -t ~ claude-code
+```
+
+This creates `~/.claude/` as a symlink to `llmenv/claude-code/.claude/`.
+
+### 2. Merge Settings
+
+Generate the final `settings.json` by merging base, personal, and work settings:
+
+```bash
+# Add llmenv/bin to your PATH (or use full path)
+export PATH="$PATH:/path/to/llmenv/bin"
+
+# Merge settings
+merge-settings --verbose
+```
+
+### 3. Setup Git Hook (Optional but Recommended)
+
+Auto-merge settings after git operations:
+
+```bash
+# From the llmenv directory
+ln -s ../../scripts/hooks/post-merge .git/hooks/post-merge
+```
+
+## Configuration
+
+### Layered Settings
+
+Settings are merged in order: **base → personal → work**
+
+1. **Base Settings** (`settings.base.json`): Core configuration, committed to repo
+2. **Personal Settings** (`settings.personal.json`): Your personal overrides, committed to repo
+3. **Work Settings** (`settings.wealthsimple.json`): Work-specific config, gitignored
+
+**Merge Rules:**
+- Nested objects: Deep recursive merge
+- Arrays: Concatenate (useful for `statusLine.context`)
+- Primitives: Last value wins
+
+### Example: Adding Personal Settings
+
+Edit `claude-code/.claude/settings.personal.json`:
+
+```json
+{
+  "statusLine": {
+    "context": [
+      "My custom status line item"
+    ]
+  },
+  "hooks": {
+    "myCustomHook": {
+      "command": "echo 'Hello from personal config'",
+      "description": "My personal hook"
+    }
+  }
+}
+```
+
+Then merge:
+
+```bash
+merge-settings --verbose
+```
+
+### Example: Adding Work Settings
+
+Create `claude-code/.claude/settings.wealthsimple.json`:
+
+```json
+{
+  "enabledPlugins": {
+    "superpowers@ws-claude-marketplace": true
+  },
+  "extraKnownMarketplaces": {
+    "ws-claude-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "wealthsimple/ws-claude-marketplace"
+      }
+    }
+  }
+}
+```
+
+Then merge:
+
+```bash
+merge-settings --verbose
+```
 
 ## Usage
 
-### Core Commands
-```bash
-llmenv install              # Install base configuration for all tools
-llmenv install ruby         # Add Ruby-specific rules
-llmenv sync                 # Update all existing installations with latest templates
-llmenv list                 # Show available languages and current installations
-llmenv status               # Display detailed configuration status
-```
-
-### How It Works
-
-1. **Templates**: Stored in `templates/` with `<!-- include: path -->` directives
-2. **Rendering**: Templates are processed to resolve includes and language sections
-3. **Symlinks**: Target locations link to files in `rendered/` directory
-4. **Updates**: `sync` command regenerates all rendered files, automatically updating all linked locations
-
-### Example Workflow
+### merge-settings Command
 
 ```bash
-# Initial setup
-llmenv install                    # Sets up ~/.claude/CLAUDE.md -> rendered/claude/CLAUDE.md
-llmenv install ruby typescript    # Adds language-specific sections
+# Basic merge with defaults
+merge-settings
 
-# Later, when base templates are updated
-llmenv sync                       # All existing installations get the updates automatically
+# Verbose output showing merge operations
+merge-settings --verbose
 
-# In a new project
-llmenv install react             # Adds React rules to existing configuration
+# Dry run to preview merged output
+merge-settings --dry-run
+
+# Custom file locations
+merge-settings -b ~/.claude/settings.base.json -p ~/.claude/settings.personal.json
 ```
 
-## Supported Tools
-- **Claude**: Global `~/.claude/CLAUDE.md` configuration
-- **Cursor**: Project-local `.cursor/rules/rules.md` with automatic .gitignore management
+**Options:**
+- `-o, --output`: Output file (default: `~/.claude/settings.json`)
+- `-b, --base`: Base settings file (default: `~/.claude/settings.base.json`)
+- `-p, --personal`: Personal settings file (default: `~/.claude/settings.personal.json`)
+- `-w, --work`: Work settings file (default: `~/.claude/settings.wealthsimple.json`)
+- `--dry-run`: Print merged output without writing
+- `-v, --verbose`: Show detailed merge operations
 
-## Supported Languages
-- Ruby (Rails conventions, RSpec, best practices)
-- TypeScript (type safety, modern JS, error handling)
-- React (hooks, performance, testing)
-- Terraform (infrastructure as code, security, testing)
+### Updating Configuration
+
+Since `.claude` is a symlink to the repo, you can edit files directly:
+
+```bash
+# Edit base guidelines
+vim ~/.claude/CLAUDE.md
+
+# Edit a skill
+vim ~/.claude/skills/typescript.md
+
+# Edit an agent
+vim ~/.claude/agents/code-reviewer.md
+
+# Merge settings after changes
+merge-settings --verbose
+```
+
+Changes are immediately reflected in Claude Code since it reads from the symlinked location.
+
+### Uninstalling
+
+```bash
+# Remove symlink
+stow -D -t ~ claude-code
+
+# Remove generated settings
+rm ~/.claude/settings.json
+```
+
+## Docker Setup
+
+The Docker container mounts the `.claude` directory as readonly:
+
+```yaml
+volumes:
+  - ./claude-code/.claude:/home/llmuser/.claude:ro
+```
+
+**Building and Running:**
+
+```bash
+# Build container
+docker-compose build
+
+# Start container
+docker-compose up
+
+# Verify configuration
+docker-compose exec llmenv ls -la ~/.claude
+```
+
+## Available Skills
+
+Skills are automatically loaded by Claude Code:
+
+- **typescript**: TypeScript and modern JavaScript development
+- **ruby**: Ruby and Rails development
+- **react**: React development patterns
+- **terraform**: Infrastructure-as-code guidelines
+
+## Available Agents
+
+Specialized agents for different tasks:
+
+- **code-reviewer**: Reviews code for best practices and maintainability
+- **pr-helper**: Helps write pull request descriptions
+- **typescript-expert**: TypeScript development specialist
+- **ruby-expert**: Ruby and Rails specialist
+- **code-clarity-reviewer**: Reviews code clarity and readability
+- **documentation-updater**: Updates documentation after code changes
+- **performance-optimizer**: Identifies performance optimization opportunities
+- **security-privacy-reviewer**: Reviews code for security vulnerabilities
+- **test-quality-enforcer**: Verifies test coverage and quality
 
 ## Benefits
 
-✅ **No Sync Issues**: Templates always reflect latest changes  
-✅ **Atomic Updates**: All installations update simultaneously  
-✅ **Easy Maintenance**: Edit one file, update everywhere  
-✅ **Fallback Support**: Automatic copying if symlinks aren't supported  
-✅ **Installation Tracking**: JSON-based tracking of what's installed where
+✅ **Simple**: Uses standard tools (stow, git hooks)
+✅ **Flexible**: Easy to add personal or work-specific settings
+✅ **Transparent**: All files are real, no template rendering
+✅ **Maintainable**: Direct editing of markdown files
+✅ **Docker-friendly**: Simple readonly mount
+✅ **Version Control**: Base and personal configs are tracked
+
+## Migration from Old System
+
+If you previously used the template-based system:
+
+1. Backup current `~/.claude/` directory
+2. Remove old symlinks: `stow -D -t ~ claude-code` (if exists)
+3. Follow installation steps above
+4. The old `blocks/` and `templates/` directories are no longer used
+
+## Troubleshooting
+
+**Settings not updating?**
+- Run `merge-settings --verbose` to see detailed merge operations
+- Check that base settings file exists: `ls ~/.claude/settings.base.json`
+
+**Stow conflicts?**
+- Stow won't overwrite existing files
+- Backup and remove existing `~/.claude/` directory first
+
+**Git hook not working?**
+- Verify hook is executable: `ls -l .git/hooks/post-merge`
+- Check that `merge-settings` is in your PATH
+- Test manually: `.git/hooks/post-merge`
+
+## Contributing
+
+To add new skills, agents, or commands:
+
+1. Create file in appropriate directory (`skills/`, `agents/`, `commands/`)
+2. Follow existing file format and frontmatter structure
+3. Commit to repository
+4. Changes are immediately available after `git pull` (if using git hook)
