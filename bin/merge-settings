@@ -79,8 +79,12 @@ def load_json_file(file_path: Path, verbose: bool = False) -> Dict[str, Any]:
         sys.exit(1)
 
 
-def check_for_modifications(output_path: Path, verbose: bool = False):
-    """Check if settings.json has been modified compared to settings.json.spec."""
+def check_for_modifications(output_path: Path, new_merged: Dict[str, Any], verbose: bool = False):
+    """Check if settings.json has been modified compared to settings.json.spec.
+
+    If settings.json differs from the spec but matches the newly merged result,
+    the change is accepted (the manual edit aligns with what would be generated).
+    """
     spec_file_path = output_path.parent / f"{output_path.name}.spec"
 
     # If spec file doesn't exist, no check needed (first run)
@@ -105,29 +109,37 @@ def check_for_modifications(output_path: Path, verbose: bool = False):
         print(f"Error reading files for comparison: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Compare
-    if current_settings != spec_settings:
-        print("\nERROR: settings.json has been modified!", file=sys.stderr)
-        print("\nThe current settings.json differs from settings.json.spec.", file=sys.stderr)
-        print("Any settings that should persist should be added to the base settings files.", file=sys.stderr)
-        print("\nDiff (- spec, + current):", file=sys.stderr)
+    # If current matches spec, nothing to worry about
+    if current_settings == spec_settings:
+        return
 
-        # Generate visual diff
-        spec_json = json.dumps(spec_settings, indent=2, sort_keys=True).splitlines(keepends=True)
-        current_json = json.dumps(current_settings, indent=2, sort_keys=True).splitlines(keepends=True)
+    # Settings diverged from spec — check if the new merge produces the same result
+    if current_settings == new_merged:
+        if verbose:
+            print("settings.json was modified but matches the new merged result, proceeding", file=sys.stderr)
+        return
 
-        diff = difflib.unified_diff(
-            spec_json,
-            current_json,
-            fromfile='settings.json.spec',
-            tofile='settings.json',
-            lineterm=''
-        )
+    print("\nERROR: settings.json has been modified!", file=sys.stderr)
+    print("\nThe current settings.json differs from settings.json.spec.", file=sys.stderr)
+    print("Any settings that should persist should be added to the base settings files.", file=sys.stderr)
+    print("\nDiff (- spec, + current):", file=sys.stderr)
 
-        for line in diff:
-            print(line, file=sys.stderr)
+    # Generate visual diff
+    spec_json = json.dumps(spec_settings, indent=2, sort_keys=True).splitlines(keepends=True)
+    current_json = json.dumps(current_settings, indent=2, sort_keys=True).splitlines(keepends=True)
 
-        sys.exit(1)
+    diff = difflib.unified_diff(
+        spec_json,
+        current_json,
+        fromfile='settings.json.spec',
+        tofile='settings.json',
+        lineterm=''
+    )
+
+    for line in diff:
+        print(line, file=sys.stderr)
+
+    sys.exit(1)
 
 
 def save_json_file(file_path: Path, data: Dict[str, Any], dry_run: bool = False, verbose: bool = False):
@@ -278,7 +290,7 @@ Examples:
 
     # Check for modifications before saving
     if not args.dry_run:
-        check_for_modifications(output_path, verbose=args.verbose)
+        check_for_modifications(output_path, merged, verbose=args.verbose)
 
     # Save or print result
     if args.verbose:
