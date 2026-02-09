@@ -18,6 +18,7 @@ Merge rules:
 """
 
 import argparse
+import difflib
 import json
 import os
 import sys
@@ -78,6 +79,57 @@ def load_json_file(file_path: Path, verbose: bool = False) -> Dict[str, Any]:
         sys.exit(1)
 
 
+def check_for_modifications(output_path: Path, verbose: bool = False):
+    """Check if settings.json has been modified compared to settings.json.spec."""
+    spec_file_path = output_path.parent / f"{output_path.name}.spec"
+
+    # If spec file doesn't exist, no check needed (first run)
+    if not spec_file_path.exists():
+        if verbose:
+            print("No spec file found, skipping modification check", file=sys.stderr)
+        return
+
+    # If settings.json doesn't exist, no check needed
+    if not output_path.exists():
+        if verbose:
+            print("No settings.json found, skipping modification check", file=sys.stderr)
+        return
+
+    # Load both files
+    try:
+        with open(output_path, 'r') as f:
+            current_settings = json.load(f)
+        with open(spec_file_path, 'r') as f:
+            spec_settings = json.load(f)
+    except Exception as e:
+        print(f"Error reading files for comparison: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Compare
+    if current_settings != spec_settings:
+        print("\nERROR: settings.json has been modified!", file=sys.stderr)
+        print("\nThe current settings.json differs from settings.json.spec.", file=sys.stderr)
+        print("Any settings that should persist should be added to the base settings files.", file=sys.stderr)
+        print("\nDiff (- spec, + current):", file=sys.stderr)
+
+        # Generate visual diff
+        spec_json = json.dumps(spec_settings, indent=2, sort_keys=True).splitlines(keepends=True)
+        current_json = json.dumps(current_settings, indent=2, sort_keys=True).splitlines(keepends=True)
+
+        diff = difflib.unified_diff(
+            spec_json,
+            current_json,
+            fromfile='settings.json.spec',
+            tofile='settings.json',
+            lineterm=''
+        )
+
+        for line in diff:
+            print(line, file=sys.stderr)
+
+        sys.exit(1)
+
+
 def save_json_file(file_path: Path, data: Dict[str, Any], dry_run: bool = False, verbose: bool = False):
     """Save merged data to JSON file."""
     if dry_run:
@@ -95,6 +147,15 @@ def save_json_file(file_path: Path, data: Dict[str, Any], dry_run: bool = False,
 
         if verbose:
             print(f"Wrote merged settings to: {file_path}", file=sys.stderr)
+
+        # Also save a .spec file with identical content
+        spec_file_path = file_path.parent / f"{file_path.name}.spec"
+        with open(spec_file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+            f.write('\n')  # Add trailing newline
+
+        if verbose:
+            print(f"Wrote spec file to: {spec_file_path}", file=sys.stderr)
     except Exception as e:
         print(f"Error writing to {file_path}: {e}", file=sys.stderr)
         sys.exit(1)
@@ -214,6 +275,10 @@ Examples:
                 print(f"Merged: {file_path.name}", file=sys.stderr)
         elif args.verbose:
             print(f"Skipped (not found): {file_path.name}", file=sys.stderr)
+
+    # Check for modifications before saving
+    if not args.dry_run:
+        check_for_modifications(output_path, verbose=args.verbose)
 
     # Save or print result
     if args.verbose:
