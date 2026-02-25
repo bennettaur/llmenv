@@ -120,8 +120,7 @@ This file contains my preferred settings and guidelines for Claude interactions.
 # Interacting with Github
 
 Use the `gh` CLI tool to interact with Github PRs.
-
-Use the `git-commit` MCP server to commit staged changes to git.
+ALWAYS push PRs up as drafts, unless explicitely instructed to do otherwise
 
 ## Code Structure and Organization
 
@@ -216,3 +215,6 @@ Use the `git-commit` MCP server to commit staged changes to git.
 - Prefer TypeScript over JavaScript when available
 - Use descriptive variable and function names
 - Include appropriate error handling
+
+# Tracking our work
+If you have access to a Notion MCP, we keep our work tracked in this notion doc: https://www.notion.so/wealthsimple/What-is-Mike-B-up-to-1f541167bd9680af9bc2c1ce1fa115c2?source=copy_link#30b41167bd968007a475eb20d91dc767 and specifically tracking active work inside a toggle heading with the title `Active Log`. Completed items can be moved inside another toggle heading labeled `Done`. Finally, if the user mentions we should brag about something, add it inside the toggle heading `Brag Doc`

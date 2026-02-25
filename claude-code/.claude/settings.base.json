@@ -4,6 +4,8 @@
       "--- SKILLS ---",
       "Skill(superpowers:*)",
       "Skill(reading-jira-tickets:*)",
+      "--- Browser Tools ---",
+      "Bash(agent-browser:*)",
       "--- MCPs ---",
       "mcp__context7",
       "mcp__sourcegraph",
@@ -156,7 +158,8 @@
     ]
   },
   "env": {
-    "LLMENV_ROOT": "/Users/mbennett/dev/bennettaur/llmenv"
+    "LLMENV_ROOT": "/Users/mbennett/dev/bennettaur/llmenv",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
     "PreToolUse": [
@@ -221,7 +224,8 @@
   },
   "enabledPlugins": {
     "pyright-lsp@claude-plugins-official": true,
-    "example-skills@anthropic-agent-skills": true
+    "example-skills@anthropic-agent-skills": true,
+    "sentience@memory-marketplace": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
