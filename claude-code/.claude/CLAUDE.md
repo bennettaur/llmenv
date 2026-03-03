@@ -148,7 +148,7 @@ ALWAYS push PRs up as drafts, unless explicitely instructed to do otherwise
 - Keep configuration files at the root or in a dedicated config directory
 
 ## Pull Request Guidelines
-- Ensure we've run our code-reviewer, code-clarity-reviewer, documentation-updater, performance-optimizer, security-privacy-reviewer, and test-quality-enforcer agents to ensure we've done a thorough self-review of the code. If they return any feedback, assess it for validity, and ensure it wouldn't impact the goal of our implementation. If you're unsure, ask the user about the validity of the feedback
+- Ensure we've run our code-reviewer, code-clarity-reviewer, code-best-practices-reviewer, documentation-updater, performance-optimizer, security-privacy-reviewer, test-quality-enforcer, and scope-drift-reviewer agents to ensure we've done a thorough self-review of the code. If they return any feedback, assess it for validity, and ensure it wouldn't impact the goal of our implementation. If you're unsure, ask the user about the validity of the feedback
 - Use the pr-readiness-assessment agent to determine whether we are ready to submit a high-quality PR
 - If we are indeed ready to submit a PR, use the pr-wrapup skill
 
