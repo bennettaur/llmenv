@@ -27,6 +27,7 @@ Based on the context, select relevant skills to invoke:
 - `test-quality-enforcer` - Run if implementation code changed (skip for docs-only, config-only changes)
 - `documentation-updater` - Run if feature changes, API changes, or behavior modifications occurred
 - `dead-code-cleaner` - Run if implementation code changed, especially after refactoring or feature completion
+- `llm-usage-security-reviewer` - Run if code involves LLM API calls, prompt construction, agent frameworks, or AI/ML integration (imports from anthropic, openai, langchain, llamaindex, etc.)
 
 ## Execution Workflow
 
@@ -43,6 +44,7 @@ Based on the context, select relevant skills to invoke:
    - API/public interface changes → Include documentation-updater
    - User input handling → Emphasize security-privacy-reviewer
    - Refactoring or significant code changes → Emphasize dead-code-cleaner
+   - LLM integration code (anthropic/openai SDK imports, prompt templates, agent configs) → Include llm-usage-security-reviewer
 
 3. **Launch skills in parallel**
    Use a SINGLE message with multiple Skill tool calls to invoke all selected reviewer skills simultaneously. Each skill with `context: fork` will automatically spawn its own subagent.
@@ -59,6 +61,7 @@ Based on the context, select relevant skills to invoke:
    - Skill tool call for test-quality-enforcer (if applicable)
    - Skill tool call for documentation-updater (if applicable)
    - Skill tool call for dead-code-cleaner (if applicable)
+   - Skill tool call for llm-usage-security-reviewer (if applicable)
    ```
 
 4. **Collect and synthesize feedback**
@@ -149,6 +152,8 @@ Based on the context, select relevant skills to invoke:
 **dead-code-cleaner**: Identify unused code, dead functions, orphaned tests, and cleanup opportunities in current changes.
 
 **scope-drift-reviewer**: Evaluate whether all changes serve the original goal. Requires the original prompt/plan as context — pass the user's original request and any implementation plan so the subagent can assess drift. Flags changes classified as "Beneficial but Unrelated" or "Unnecessary Drift".
+
+**llm-usage-security-reviewer**: Focus on LLM API call sites, prompt construction, agent loop configuration, and tool definitions. Prioritize code paths where user-provided input flows into LLM prompts.
 
 ## Example Invocation
 
