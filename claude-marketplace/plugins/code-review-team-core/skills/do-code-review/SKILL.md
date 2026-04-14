@@ -1,15 +1,19 @@
 ---
 name: do-code-review
-description: "Orchestrate comprehensive code review by running specialized review agents in parallel. Use when: (1) User explicitly requests code review, (2) Before creating a pull request, (3) After completing a feature or major implementation, (4) When user indicates they're done with changes and ready to submit/merge. This skill coordinates multiple review agents (code quality, security, performance, testing, documentation, clarity) to provide thorough feedback."
+description: "Orchestrate comprehensive code review by running specialized review skills in parallel as forked subagents. Use when: (1) User explicitly requests code review, (2) Before creating a pull request, (3) After completing a feature or major implementation, (4) When user indicates they're done with changes and ready to submit/merge. This skill coordinates multiple review subagents (code quality, security, performance, testing, documentation, clarity) to provide thorough feedback."
 ---
 
 # Code Review Orchestration
 
-This skill coordinates parallel execution of specialized review agents to provide comprehensive code feedback.
+This skill coordinates parallel execution of specialized review skills to provide comprehensive code feedback. Each reviewer skill uses `context: fork` to run in an isolated subagent, analyzing the code independently and returning findings.
 
-## Review Agent Selection
+## How It Works
 
-Based on the context, select relevant agents:
+Each reviewer skill below has `context: fork` in its frontmatter, which means invoking it via the Skill tool automatically spawns a dedicated subagent. The subagent receives the skill's instructions as its prompt, runs its analysis in isolation (no conversation history), and returns its findings.
+
+## Review Skill Selection
+
+Based on the context, select relevant skills to invoke:
 
 **Always run:**
 - `superpowers:code-reviewer` - (If it's available) Reviews against original plan and coding standards
@@ -32,34 +36,34 @@ Based on the context, select relevant agents:
    git diff --name-only origin/main...HEAD
    ```
 
-2. **Determine agent set**
+2. **Determine skill set**
    Based on changed files:
    - Code files (.ts, .js, .py, .rb, etc.) → Include code-best-practices-reviewer, test-quality-enforcer, performance-optimizer, dead-code-cleaner
-   - Config/docs only → Skip best-practices/test/performance/dead-code agents
+   - Config/docs only → Skip best-practices/test/performance/dead-code skills
    - API/public interface changes → Include documentation-updater
    - User input handling → Emphasize security-privacy-reviewer
    - Refactoring or significant code changes → Emphasize dead-code-cleaner
 
-3. **Launch agents in parallel**
-   Use a SINGLE message with multiple Task tool calls to launch all selected agents simultaneously.
+3. **Launch skills in parallel**
+   Use a SINGLE message with multiple Skill tool calls to invoke all selected reviewer skills simultaneously. Each skill with `context: fork` will automatically spawn its own subagent.
 
    Example structure:
    ```
    [Single message containing:]
-   - Task tool call for superpowers:code-reviewer
-   - Task tool call for code-clarity-reviewer
-   - Task tool call for security-privacy-reviewer
-   - Task tool call for scope-drift-reviewer
-   - Task tool call for code-best-practices-reviewer (if applicable)
-   - Task tool call for performance-optimizer (if applicable)
-   - Task tool call for test-quality-enforcer (if applicable)
-   - Task tool call for documentation-updater (if applicable)
-   - Task tool call for dead-code-cleaner (if applicable)
+   - Skill tool call for superpowers:code-reviewer
+   - Skill tool call for code-clarity-reviewer
+   - Skill tool call for security-privacy-reviewer
+   - Skill tool call for scope-drift-reviewer
+   - Skill tool call for code-best-practices-reviewer (if applicable)
+   - Skill tool call for performance-optimizer (if applicable)
+   - Skill tool call for test-quality-enforcer (if applicable)
+   - Skill tool call for documentation-updater (if applicable)
+   - Skill tool call for dead-code-cleaner (if applicable)
    ```
 
 4. **Collect and synthesize feedback**
-   After all agents complete:
-   - Deduplicate findings — if multiple agents flag the same issue, merge into one entry and list all discovering agents
+   After all subagents complete:
+   - Deduplicate findings — if multiple skills flag the same issue, merge into one entry and list all discovering skills
    - Assign each unique issue a global number (sequential across all severity groups)
    - Classify each issue into one of four severity levels (see output format below)
    - Present the consolidated report using the **exact format** specified below
@@ -73,7 +77,7 @@ Based on the context, select relevant agents:
 
    **Files reviewed:** <count>
    **Issues found:** <total count>
-   **Reviewed by:** <comma-separated list of all agents that ran>
+   **Reviewed by:** <comma-separated list of all skills that ran>
 
    ---
 
@@ -81,7 +85,7 @@ Based on the context, select relevant agents:
 
    **#1 — <Short issue title>**
    <Description of the issue: what's wrong, where it occurs (file:line if possible), and why it matters.>
-   _Found by: <agent-name>, <agent-name>_
+   _Found by: <skill-name>, <skill-name>_
 
    **#2 — <Short issue title>**
    ...
@@ -92,7 +96,7 @@ Based on the context, select relevant agents:
 
    **#3 — <Short issue title>**
    <Description of the issue.>
-   _Found by: <agent-name>_
+   _Found by: <skill-name>_
 
    ---
 
@@ -100,7 +104,7 @@ Based on the context, select relevant agents:
 
    **#4 — <Short issue title>**
    <Description of the issue.>
-   _Found by: <agent-name>, <agent-name>_
+   _Found by: <skill-name>, <skill-name>_
 
    ---
 
@@ -108,7 +112,7 @@ Based on the context, select relevant agents:
 
    **#5 — <Short issue title>**
    <Description of the issue.>
-   _Found by: <agent-name>_
+   _Found by: <skill-name>_
    ```
 
    **Severity classification guide:**
@@ -120,13 +124,13 @@ Based on the context, select relevant agents:
 6. **Follow-up actions**
    If blocking issues found:
    - Fix issues before proceeding to PR
-   - Re-run affected agents to verify fixes
+   - Re-run affected skills to verify fixes
 
    If only improvements suggested:
    - Ask user whether to implement improvements or proceed with PR
    - Respect user's decision on scope
 
-## Agent-Specific Context
+## Skill-Specific Context
 
 **superpowers:code-reviewer**: Requires implementation plan context. If no plan exists, skip or use general coding standards.
 
@@ -144,26 +148,26 @@ Based on the context, select relevant agents:
 
 **dead-code-cleaner**: Identify unused code, dead functions, orphaned tests, and cleanup opportunities in current changes.
 
-**scope-drift-reviewer**: Evaluate whether all changes serve the original goal. Requires the original prompt/plan as context — pass the user's original request and any implementation plan so the agent can assess drift. Flags changes classified as "Beneficial but Unrelated" or "Unnecessary Drift".
+**scope-drift-reviewer**: Evaluate whether all changes serve the original goal. Requires the original prompt/plan as context — pass the user's original request and any implementation plan so the subagent can assess drift. Flags changes classified as "Beneficial but Unrelated" or "Unnecessary Drift".
 
 ## Example Invocation
 
 When user says "Review my authentication implementation":
 
 1. Check git diff (authentication changes = security-critical)
-2. Launch in parallel:
-   - All "always run" agents (including scope-drift-reviewer with the original prompt as context)
+2. Launch in parallel via Skill tool calls:
+   - All "always run" skills (including scope-drift-reviewer with the original prompt as context)
    - code-best-practices-reviewer (code files changed)
    - performance-optimizer (auth often has DB queries)
    - test-quality-enforcer (new implementation)
    - documentation-updater (likely API changes)
    - dead-code-cleaner (especially if refactored from old auth pattern)
-3. Synthesize findings — prioritize security issues, best practice violations, and any scope drift flags
+3. Synthesize findings from all subagents — prioritize security issues, best practice violations, and any scope drift flags
 4. Present prioritized feedback
 
 ## Important Notes
 
-- **Parallel execution is mandatory** - Always use a single message with multiple Task calls
-- **Context matters** - Don't run irrelevant agents (e.g., test-quality-enforcer on README-only changes)
+- **Parallel execution is mandatory** - Always use a single message with multiple Skill tool calls
+- **Context matters** - Don't run irrelevant skills (e.g., test-quality-enforcer on README-only changes)
 - **Respect scope** - If user wants quick review, ask which aspects to focus on
-- **No false reassurance** - If agents find issues, don't minimize them. Report honestly.
+- **No false reassurance** - If skills find issues, don't minimize them. Report honestly.
