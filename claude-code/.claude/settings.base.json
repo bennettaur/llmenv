@@ -224,14 +224,20 @@
   },
   "enabledPlugins": {
     "pyright-lsp@claude-plugins-official": true,
-    "example-skills@anthropic-agent-skills": true,
-    "sentience@memory-marketplace": true
+    "sentience@memory-marketplace": true,
+    "code-review-team-core@bennettaur-marketplace": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
       "source": {
         "source": "github",
         "repo": "anthropics/skills"
+      }
+    },
+    "bennettaur-marketplace": {
+      "source": {
+        "source": "directory",
+        "path": "../../claude-marketplace"
       }
     }
   },
