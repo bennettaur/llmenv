@@ -26,31 +26,18 @@ When reviewing code, systematically analyze for these performance optimization o
    - Distinguish between in-memory caching (preferred) and external caching needs
    - Only suggest external caches when latency benefits are significant and there are no authorization concerns or risks of serving stale critical data (e.g., financial balances, inventory counts)
 
-3. **Cross-Function Redundant Resource Fetching**
-   - **This is a high-priority pattern to watch for.** When multiple related functions in the same module, toolkit, or class each independently fetch the same underlying resource (API call, database query, file read, client initialization), flag it as redundant work.
-   - Look across all functions in a module/toolkit, not just within individual functions. Sibling functions that share common dependencies (e.g., all operating on the same PR, same user, same record) often duplicate the same fetch calls.
-   - Common manifestations:
-     - Multiple tool/handler functions each calling the same API endpoint to get the same object (e.g., each tool fetches the same pull request, each handler queries the same database record)
-     - Multiple functions each initializing the same client or connection
-     - Functions in a toolkit that each resolve the same parent resource before doing their specific work
-   - Recommend strategies like:
-     - Passing the already-fetched resource through a shared context, dependency injection, or parameter rather than re-fetching it in each function
-     - Adding a caching/memoization layer at the client or resource-fetching level (e.g., `@lru_cache`, request-scoped caches)
-     - Restructuring so the shared resource is fetched once by the caller/orchestrator and passed into each function
-   - Quantify the impact: if N tools each make the same call, that's N-1 redundant requests per invocation cycle, which compounds with concurrent workflows and risks hitting rate limits
-
-4. **Parallelization and Concurrency**
+3. **Parallelization and Concurrency**
    - Identify IO-heavy operations that could be parallelized (external API calls, file operations, network requests)
    - Suggest appropriate concurrency patterns for the language/framework in use
    - Ensure parallel operations are truly independent before suggesting parallelization
    - Consider thread safety and race condition implications
 
-5. **Data Structure Optimization**
+4. **Data Structure Optimization**
    - Suggest more efficient data structures for specific use cases (e.g., Set for membership testing, Map for key-based lookup)
    - Identify unnecessary data transformations or copies
    - Recommend streaming or lazy evaluation where appropriate for large datasets
 
-6. **Framework-Specific Optimizations**
+5. **Framework-Specific Optimizations**
    - Apply language and framework-specific best practices (e.g., Rails async queries, React useMemo/useCallback, Python generators)
    - Leverage built-in optimization features of the frameworks in use
    - Suggest framework-specific patterns that improve performance

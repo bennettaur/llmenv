@@ -12,7 +12,7 @@ This skill coordinates parallel execution of specialized review agents to provid
 Based on the context, select relevant agents:
 
 **Always run:**
-- `superpowers:code-reviewer` - Reviews against original plan and coding standards
+- `superpowers:code-reviewer` - (If it's available) Reviews against original plan and coding standards
 - `code-clarity-reviewer` - Reviews code readability, comments, and beginner-friendliness
 - `security-privacy-reviewer` - Identifies security vulnerabilities and privacy risks
 - `scope-drift-reviewer` - Detects changes that drift from the original goal or prompt
@@ -59,12 +59,65 @@ Based on the context, select relevant agents:
 
 4. **Collect and synthesize feedback**
    After all agents complete:
-   - Group findings by severity (blocking issues vs improvements)
-   - Identify common themes across agents
-   - Prioritize actionable items
-   - Present consolidated summary to user
+   - Deduplicate findings — if multiple agents flag the same issue, merge into one entry and list all discovering agents
+   - Assign each unique issue a global number (sequential across all severity groups)
+   - Classify each issue into one of four severity levels (see output format below)
+   - Present the consolidated report using the **exact format** specified below
 
-5. **Follow-up actions**
+5. **Consolidated Report Output Format**
+
+   Use this structure exactly. Omit any severity section that has zero issues.
+
+   ```
+   # Code Review Summary
+
+   **Files reviewed:** <count>
+   **Issues found:** <total count>
+   **Reviewed by:** <comma-separated list of all agents that ran>
+
+   ---
+
+   ## Blocking (must fix before merge)
+
+   **#1 — <Short issue title>**
+   <Description of the issue: what's wrong, where it occurs (file:line if possible), and why it matters.>
+   _Found by: <agent-name>, <agent-name>_
+
+   **#2 — <Short issue title>**
+   ...
+
+   ---
+
+   ## High (strongly recommended)
+
+   **#3 — <Short issue title>**
+   <Description of the issue.>
+   _Found by: <agent-name>_
+
+   ---
+
+   ## Medium (recommended)
+
+   **#4 — <Short issue title>**
+   <Description of the issue.>
+   _Found by: <agent-name>, <agent-name>_
+
+   ---
+
+   ## Low (nice to have)
+
+   **#5 — <Short issue title>**
+   <Description of the issue.>
+   _Found by: <agent-name>_
+   ```
+
+   **Severity classification guide:**
+   - **Blocking:** Security vulnerabilities, data loss risks, broken functionality, crashes, correctness bugs
+   - **High:** Significant best-practice violations, missing tests for critical paths, meaningful performance issues, scope drift that changes behavior
+   - **Medium:** Code clarity improvements, minor performance optimizations, missing edge-case tests, documentation gaps
+   - **Low:** Style nits, optional refactors, nice-to-have documentation, minor dead code
+
+6. **Follow-up actions**
    If blocking issues found:
    - Fix issues before proceeding to PR
    - Re-run affected agents to verify fixes

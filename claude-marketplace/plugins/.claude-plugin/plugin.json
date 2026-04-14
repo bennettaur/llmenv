@@ -1,0 +1,20 @@
+{
+  "name": "code-review-team",
+  "version": "1.0.0",
+  "description": "Code review team skill for orchestrating comprehensive code reviews using specialized parallel agents",
+  "author": {
+    "name": "Michael Bennett"
+  },
+  "keywords": ["code-review", "agents", "quality", "security", "performance", "testing"],
+  "skills": "./skills/",
+  "agents": [
+    "./agents/code-best-practices-reviewer.md",
+    "./agents/code-clarity-reviewer.md",
+    "./agents/dead-code-cleaner.md",
+    "./agents/documentation-updater.md",
+    "./agents/performance-optimizer.md",
+    "./agents/scope-drift-reviewer.md",
+    "./agents/security-privacy-reviewer.md",
+    "./agents/test-quality-enforcer.md"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "bennettaur-marketplace",
+  "owner": {
+    "name": "Michael Bennett",
+    "email": "bennettaur@gmail.com"
+  },
+  "metadata": {
+    "description": "Bennettaur's Claude Code Plugin Bazaar!",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "episodic-memory",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/episodic-memory.git"
+      },
+      "description": "Semantic search for Claude Code conversations. Remember past discussions, decisions, and patterns across sessions. Gives you memory that persists between sessions.",
+      "version": "1.0.13",
+      "strict": true
+    },
+    {
+      "name": "code-review-team-core",
+      "source": "./plugins/code-review-team-core",
+      "description": "Code review team skill for orchestrating comprehensive code reviews using specialized parallel agents",
+      "version": "1.0.0",
+      "author": {
+        "name": "Michael Bennett"
+      }
+    }
+  ]
+}
