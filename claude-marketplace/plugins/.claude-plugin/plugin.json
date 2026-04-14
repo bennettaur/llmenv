@@ -1,6 +1,6 @@
 {
   "name": "code-review-team",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Code review team skill for orchestrating comprehensive code reviews using specialized parallel agents",
   "author": {
     "name": "Michael Bennett"
