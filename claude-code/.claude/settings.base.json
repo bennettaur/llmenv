@@ -236,8 +236,8 @@
     },
     "bennettaur-marketplace": {
       "source": {
-        "source": "directory",
-        "path": "../../claude-marketplace"
+        "source": "github",
+        "repo": "bennettaur/llmenv"
       }
     }
   },
