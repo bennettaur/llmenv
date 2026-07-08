@@ -255,5 +255,7 @@
       "-- used by nx Daemon --",
       "/private/tmp/claude/**"
     ]
-  }
+  },
+  "theme": "dark",
+  "tui": "fullscreen"
 }
