@@ -201,6 +201,23 @@ ALWAYS push PRs up as drafts, unless explicitely instructed to do otherwise
 - Use UPPER_CASE for constants
 - Use camelCase for variables and functions (unless language conventions dictate otherwise)
 
+#### Lockfile registry hygiene (IMPORTANT)
+My machine's package managers may resolve through a private/internal registry
+proxy. Committing a lockfile generated locally can pin every package's tarball
+URL to that internal proxy, which public/CI runners cannot reach — they then
+fail with `403 Forbidden` on every package during install.
+
+- **Any time you add, remove, or update a dependency** (`bun add`, `npm install`,
+  `yarn add`, etc.), inspect the lockfile (`bun.lock`, `package-lock.json`,
+  `yarn.lock`) before committing and confirm resolved sources point at the
+  **public registry** (`https://registry.npmjs.org/`), not an internal host.
+- If the lockfile pins internal-proxy URLs, rewrite the host prefix back to the
+  public registry. Internal proxies mirror npm's path layout and integrity
+  hashes are content-addressed, so this is a safe source swap; verify with
+  `bun install --frozen-lockfile` (or the equivalent) afterward.
+- Quick check before committing a lockfile: every resolved URL should be on the
+  public registry host, with no internal/corporate hostnames present.
+
 ### File Organization
 - One primary class/component per file
 - Group related files in directories by feature or domain
