@@ -21,18 +21,26 @@ llmenv/
 │       ├── settings.personal.json         # Personal overrides (committed)
 │       ├── settings.wealthsimple.json     # Work config (gitignored)
 │       ├── settings.json                  # Merged output (gitignored, generated)
-│       ├── skills/                        # Language-specific skills
-│       │   ├── typescript.md
-│       │   ├── ruby.md
-│       │   ├── react.md
-│       │   └── terraform.md
-│       ├── agents/                        # Specialized agents
-│       │   ├── code-reviewer.md
-│       │   ├── pr-helper.md
-│       │   ├── typescript-expert.md
-│       │   └── ... (9 total)
-│       └── commands/
-│           └── pr-wrapup.md
+│       ├── skills/                        # Skills (each in own directory)
+│       │   ├── perform-review/SKILL.md
+│       │   ├── pr-wrapup/SKILL.md
+│       │   ├── react/SKILL.md
+│       │   ├── reading-jira-tickets/SKILL.md
+│       │   ├── refactor-pr-mergeability/SKILL.md
+│       │   ├── ruby/SKILL.md
+│       │   ├── terraform/SKILL.md
+│       │   └── typescript/SKILL.md
+│       └── agents/                        # Specialized agents (10 total)
+│           ├── code-clarity-reviewer.md
+│           ├── code-reviewer.md
+│           ├── dead-code-cleaner.md
+│           ├── documentation-updater.md
+│           ├── performance-optimizer.md
+│           ├── pr-readiness-assessment.md
+│           ├── ruby-expert.md
+│           ├── security-privacy-reviewer.md
+│           ├── test-quality-enforcer.md
+│           └── typescript-expert.md
 ├── bin/
 │   └── merge-settings     # Python script for recursive settings merge
 ├── scripts/
@@ -225,24 +233,29 @@ docker-compose exec llmenv ls -la ~/.claude
 
 Skills are automatically loaded by Claude Code:
 
-- **typescript**: TypeScript and modern JavaScript development
-- **ruby**: Ruby and Rails development
+- **perform-review**: Orchestrates parallel code review agents for comprehensive feedback
+- **pr-wrapup**: Creates PRs and monitors CI
 - **react**: React development patterns
+- **reading-jira-tickets**: Read and search JIRA tickets from the command line
+- **refactor-pr-mergeability**: Refactors large branches into smaller, logical commits or PR stacks
+- **ruby**: Ruby and Rails development
 - **terraform**: Infrastructure-as-code guidelines
+- **typescript**: TypeScript and modern JavaScript development
 
 ## Available Agents
 
 Specialized agents for different tasks:
 
-- **code-reviewer**: Reviews code for best practices and maintainability
-- **pr-helper**: Helps write pull request descriptions
-- **typescript-expert**: TypeScript development specialist
-- **ruby-expert**: Ruby and Rails specialist
 - **code-clarity-reviewer**: Reviews code clarity and readability
+- **code-reviewer**: Reviews code for best practices and maintainability
+- **dead-code-cleaner**: Identifies dead, unused, or poorly utilized code
 - **documentation-updater**: Updates documentation after code changes
 - **performance-optimizer**: Identifies performance optimization opportunities
+- **pr-readiness-assessment**: Assesses whether a branch is ready for PR review
+- **ruby-expert**: Ruby and Rails specialist
 - **security-privacy-reviewer**: Reviews code for security vulnerabilities
 - **test-quality-enforcer**: Verifies test coverage and quality
+- **typescript-expert**: TypeScript development specialist
 
 ## Benefits
 
