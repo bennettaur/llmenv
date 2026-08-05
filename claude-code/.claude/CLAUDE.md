@@ -92,19 +92,69 @@ This file contains my preferred settings and guidelines for Claude interactions.
 
 ### Comment Management
 
+**Default to no comment.** A comment must earn its place. If a better name or a
+smaller function removes the need for it, do that instead.
+
+**Comment the WHY, not the WHAT:**
+
+- Business rules and the reasoning behind them ("regulator requires T+2
+  settlement", "free tier capped at 5 to match billing plan")
+- Why this approach over the obvious alternative ("sequential because the
+  upstream API rate-limits concurrent writes")
+- Non-obvious constraints, invariants, and consequences of changing the code
+- Links to tickets, RFCs, specs, or upstream bug reports that carry the context
+- The WHAT only when the code itself is genuinely hard to follow — dense
+  algorithms, bit manipulation, non-obvious math, gnarly regex
+
+**Be succinct:**
+
+- One or two lines is the target. A paragraph needs justification
+- No restating the code in English (`// increment counter` above `counter++`)
+- No section-header or step-by-step banners narrating obvious control flow
+  (`// Step 1: validate input`)
+- Trim, don't stack: prefer editing an existing comment over adding another
+  next to it
+
+**Docblocks follow the language and codebase convention:**
+
+- Where the language expects docblocks for public API (Python docstrings,
+  Ruby YARD, Go doc comments, JSDoc/TSDoc), write them. They feed generated
+  documentation and IDE tooling — that's a real consumer, not clutter
+- Use the exact format the codebase already uses (Google-style, NumPy,
+  reStructuredText, etc.). Match the surrounding files, not a personal
+  preference
+- Document every parameter, return value, and raised exception the convention
+  calls for. Explain what each parameter *means* — its units, valid range,
+  ownership, side effects — rather than restating its name and type
+- Keep the summary line to one sentence. The succinctness rules above still
+  apply to the prose inside a docblock
+- Where the language and codebase do not use docblocks, don't introduce them
+
+**Evergreen — describe the current state only:**
+
+- No temporal context: "recently changed", "new implementation", "after
+  refactor", "was previously", "now uses", "moved from"
+- No change narration or migration history — that belongs in git and the PR
+- No AI reasoning artifacts: don't explain what you tried, why you chose the
+  approach during this session, or address the reviewer ("note that I've...",
+  "as requested", "keeping this for backwards compat with the old version").
+  Durable design rationale is fine; session narrative is not
+- No TODO/FIXME referencing this session's work. Real TODOs need a ticket
+  reference
+- A comment must read correctly to someone seeing the file for the first time,
+  with no knowledge of its history
+
 **NEVER:**
 
-- Remove comments unless provably false
+- Remove comments unless provably false or made obsolete by the change
 - Comment out code (delete instead)
 - Leave commented code in place
-- Add temporal context ("after refactor", "new version")
-- Reference recent changes in comments
 
 **ALWAYS:**
 
 - Preserve existing comments
-- Make comments evergreen (describe current state)
 - Keep comments relevant to file context
+- Match the comment density and style already present in the file
 
 ### Code Style
 
