@@ -23,7 +23,7 @@
       "name": "code-review-team-core",
       "source": "./claude-marketplace/plugins/code-review-team-core",
       "description": "Code review team skill for orchestrating comprehensive code reviews using specialized parallel agents",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "author": {
         "name": "Michael Bennett"
       }

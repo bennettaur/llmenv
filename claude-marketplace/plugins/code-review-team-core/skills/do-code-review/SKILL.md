@@ -30,6 +30,7 @@ Based on the context, select relevant reviewers to launch:
 - `documentation-updater` - Run if feature changes, API changes, or behavior modifications occurred
 - `dead-code-cleaner` - Run if implementation code changed, especially after refactoring or feature completion
 - `llm-usage-security-reviewer` - Run if code involves LLM API calls, prompt construction, agent frameworks, or AI/ML integration (imports from anthropic, openai, langchain, llamaindex, etc.)
+- `external-api-integration-reviewer` - Run if code makes outbound network calls (HTTP clients, third-party SDKs, GraphQL/gRPC clients, internal service clients, webhook publishers)
 
 ## Execution Workflow
 
@@ -47,6 +48,7 @@ Based on the context, select relevant reviewers to launch:
    - User input handling → Emphasize security-privacy-reviewer
    - Refactoring or significant code changes → Emphasize dead-code-cleaner
    - LLM integration code (anthropic/openai SDK imports, prompt templates, agent configs) → Include llm-usage-security-reviewer
+   - External API calls (fetch/axios/requests/Faraday, third-party SDKs, GraphQL clients, service-to-service calls) → Include external-api-integration-reviewer
 
 3. **Launch subagents in parallel**
    Use a SINGLE message with multiple Agent tool calls to launch all selected reviewers simultaneously. Each Agent call should:
@@ -66,6 +68,7 @@ Based on the context, select relevant reviewers to launch:
    - Agent(subagent_type="documentation-updater", description="Documentation review", prompt="Review these changes: <files and context>") (if applicable)
    - Agent(subagent_type="dead-code-cleaner", description="Dead code review", prompt="Review these changes: <files and context>") (if applicable)
    - Agent(subagent_type="llm-usage-security-reviewer", description="LLM security review", prompt="Review these changes: <files and context>") (if applicable)
+   - Agent(subagent_type="external-api-integration-reviewer", description="External API integration review", prompt="Review these changes: <files and context>") (if applicable)
    ```
 
 4. **Collect and synthesize feedback**
@@ -160,6 +163,8 @@ When crafting the `prompt` for each Agent call, include the following context:
 **scope-drift-reviewer**: Include the original user prompt/plan so the subagent can assess whether changes serve the original goal. This context is critical for accurate drift detection.
 
 **llm-usage-security-reviewer**: Highlight any LLM API call sites, prompt construction, agent loop configuration, and tool definitions in the changes.
+
+**external-api-integration-reviewer**: Point out the external call sites in the diff and name any shared HTTP client, interceptor, or middleware layer the codebase uses, so the subagent can check centralized handling before flagging individual call sites.
 
 ## Example Invocation
 
