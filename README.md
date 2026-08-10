@@ -46,8 +46,21 @@ llmenv/
 ├── scripts/
 │   └── hooks/
 │       └── post-merge     # Git hook for auto-merge
+├── tools/                 # Standalone tools — not stowed, each its own project
+│   └── code-review-interview/  # Phased interview → Code Review Style doc
 └── docker/                # Docker setup files
 ```
+
+## Tools
+
+`tools/` holds standalone programs rather than configuration. They are not part of the
+stow package and are not symlinked anywhere — each is its own project, run from its own
+directory.
+
+- **[code-review-interview](tools/code-review-interview/)** — interviews you about how
+  you review code across three phases, then writes a Code Review Style doc you can hand
+  to another LLM. A `uv` project: `cd tools/code-review-interview && uv sync && uv run
+  code-review-interview run`.
 
 ## Installation
 
