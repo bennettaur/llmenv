@@ -2,6 +2,8 @@
 claude-code/.claude/settings.json
 claude-code/.claude/settings.wealthsimple.json
 claude-code/.claude/settings.*.local.json
+claude-code/.claude/settings.json.back
+claude-code/.claude/settings.json.spec
 
 # Docker working directories (user-specific repositories and servers)
 repos/*
