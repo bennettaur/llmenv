@@ -25,6 +25,7 @@ Based on the context, select relevant reviewers to launch:
 
 **Conditionally run based on changes:**
 - `code-best-practices-reviewer` - Run if code files changed (detects tech stack and applies best practices hierarchy)
+- `comment-quality-reviewer` - Run if code files changed (reviews added and changed comments, and flags missing ones)
 - `performance-optimizer` - Run if performance-sensitive code changed (database queries, loops, API calls, data processing)
 - `test-quality-enforcer` - Run if implementation code changed (skip for docs-only, config-only changes)
 - `documentation-updater` - Run if feature changes, API changes, or behavior modifications occurred
@@ -42,8 +43,8 @@ Based on the context, select relevant reviewers to launch:
 
 2. **Determine reviewer set**
    Based on changed files:
-   - Code files (.ts, .js, .py, .rb, etc.) → Include code-best-practices-reviewer, test-quality-enforcer, performance-optimizer, dead-code-cleaner
-   - Config/docs only → Skip best-practices/test/performance/dead-code reviewers
+   - Code files (.ts, .js, .py, .rb, etc.) → Include code-best-practices-reviewer, comment-quality-reviewer, test-quality-enforcer, performance-optimizer, dead-code-cleaner
+   - Config/docs only → Skip best-practices/comment-quality/test/performance/dead-code reviewers
    - API/public interface changes → Include documentation-updater
    - User input handling → Emphasize security-privacy-reviewer
    - Refactoring or significant code changes → Emphasize dead-code-cleaner
@@ -63,6 +64,7 @@ Based on the context, select relevant reviewers to launch:
    - Agent(subagent_type="security-privacy-reviewer", description="Security review", prompt="Review these changes for security issues: <files and context>")
    - Agent(subagent_type="scope-drift-reviewer", description="Scope drift review", prompt="Original goal: <goal>. Review these changes for drift: <files and context>")
    - Agent(subagent_type="code-best-practices-reviewer", description="Best practices review", prompt="Review these changes: <files and context>") (if applicable)
+   - Agent(subagent_type="comment-quality-reviewer", description="Comment quality review", prompt="Review these changes: <files and context>") (if applicable)
    - Agent(subagent_type="performance-optimizer", description="Performance review", prompt="Review these changes: <files and context>") (if applicable)
    - Agent(subagent_type="test-quality-enforcer", description="Test quality review", prompt="Review these changes: <files and context>") (if applicable)
    - Agent(subagent_type="documentation-updater", description="Documentation review", prompt="Review these changes: <files and context>") (if applicable)
@@ -148,6 +150,8 @@ When crafting the `prompt` for each Agent call, include the following context:
 
 **code-clarity-reviewer**: Focus on whether code tells a story and is accessible to team members.
 
+**comment-quality-reviewer**: List the changed files so it can read each one in full. Whether a comment is needed depends on the surrounding code, not just the diff.
+
 **security-privacy-reviewer**: Prioritize user data handling, authentication/authorization, input validation, and logging.
 
 **code-best-practices-reviewer**: Mention the detected tech stack so it can apply best practices in priority order: codebase conventions, framework patterns, language standards, then general engineering principles.
@@ -174,6 +178,7 @@ When user says "Review my authentication implementation":
 2. Launch in parallel via Agent tool calls:
    - All "always run" reviewers (scope-drift-reviewer with the original prompt as context)
    - code-best-practices-reviewer (code files changed)
+   - comment-quality-reviewer (code files changed)
    - performance-optimizer (auth often has DB queries)
    - test-quality-enforcer (new implementation)
    - documentation-updater (likely API changes)
