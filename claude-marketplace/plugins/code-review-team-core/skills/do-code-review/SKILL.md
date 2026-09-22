@@ -44,7 +44,7 @@ Based on the context, select relevant reviewers to launch:
 2. **Determine reviewer set**
    Based on changed files:
    - Code files (.ts, .js, .py, .rb, etc.) → Include code-best-practices-reviewer, comment-quality-reviewer, test-quality-enforcer, performance-optimizer, dead-code-cleaner
-   - Config/docs only → Skip best-practices/test/performance/dead-code reviewers
+   - Config/docs only → Skip best-practices/comment-quality/test/performance/dead-code reviewers
    - API/public interface changes → Include documentation-updater
    - User input handling → Emphasize security-privacy-reviewer
    - Refactoring or significant code changes → Emphasize dead-code-cleaner
@@ -178,6 +178,7 @@ When user says "Review my authentication implementation":
 2. Launch in parallel via Agent tool calls:
    - All "always run" reviewers (scope-drift-reviewer with the original prompt as context)
    - code-best-practices-reviewer (code files changed)
+   - comment-quality-reviewer (code files changed)
    - performance-optimizer (auth often has DB queries)
    - test-quality-enforcer (new implementation)
    - documentation-updater (likely API changes)
