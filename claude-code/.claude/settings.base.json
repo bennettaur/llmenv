@@ -133,6 +133,8 @@
       "Bash(find * -delete*)",
       "Bash(find * -exec*)",
       "Bash(find * -ok*)",
+      "Bash(find * -fprint*)",
+      "Bash(find * -fls*)",
       "Bash(chmod +x:*)",
       "Bash(chown:*)",
       "Bash(mise dc-nuke)"

@@ -37,8 +37,8 @@ Every push is reviewed first. Committing, pushing the branch, and opening a draf
 ## Git and GitHub
 
 - Use the `gh` CLI. PRs are always drafts unless I say otherwise.
-- Never skip commit hooks. If a hook fails, fix the cause or tell me.
-- If commit signing is required but unavailable (for example, 1Password is locked), commit with `--no-gpg-sign` and push the commits unsigned. I'll sign them later.
+- Never skip commit hooks, including by committing through another tool. If a hook fails, fix the cause or tell me.
+- If a commit fails only because the signing agent is unavailable (for example, 1Password is locked), commit with `--no-gpg-sign` and push the commits unsigned. I'll sign them later.
 
 ## Tracking our work
 
