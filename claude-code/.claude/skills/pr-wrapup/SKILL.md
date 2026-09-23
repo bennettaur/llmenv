@@ -1,6 +1,6 @@
 ---
 name: pr-wrapup
-description: Push the current branch, open a draft PR, and watch CI, reporting any failures. Use as the last step of finishing work, after the code has been committed and /do-code-review feedback is addressed. Not for checking CI on an existing PR. Pass a short summary of what was built and why as the arguments; start them with `--commit` to commit any uncommitted changes first.
+description: Push the current branch, open a draft PR, and watch CI, reporting any failures. Use as the last step of finishing work, after the code has been committed and /do-code-review feedback is addressed. Not for checking CI status without pushing new commits. Pass a short summary of what was built and why as the arguments; start them with `--commit` to commit any uncommitted changes first.
 context: fork
 agent: general-purpose
 ---
@@ -73,6 +73,7 @@ EOF
    - Display the full error output
    - Exit with error
    - Never retry with `--no-verify`, `-n`, or any other way of skipping hooks such as gitleaks. Report the hook failure.
+   - If the permission rules deny the commit because the message itself contains ` -n` or `--no-verify`, reword the message and retry.
 
 If the first argument isn't `--commit`, skip Step 1 entirely.
 
@@ -137,9 +138,9 @@ Analyze the changes and generate:
 
 ## Step 4: Create or get PR
 
-Try to create the draft PR with the generated title and body. The quoted heredoc stops the shell from running backticks or `$(...)` in the body:
+Try to create the draft PR with the generated title and body. Single quotes around the title (write any `'` in it as `'\''`) and the quoted heredoc stop the shell from running backticks or `$(...)`:
 ```bash
-gh pr create --draft --title "<title>" --body-file - 2>&1 <<'EOF'
+gh pr create --draft --title '<title>' --body-file - 2>&1 <<'EOF'
 <body>
 EOF
 ```
@@ -174,12 +175,12 @@ EOF
 
 **NOTE: You have access to all previous command outputs in conversation history - reference them directly instead of using bash variables.**
 
-Watch every check on the PR. CI usually outlasts the Bash tool's timeout, so run this in the background and wait for it to finish instead of polling with sleep:
+Watch every check on the PR. The watch blocks until checks finish, so run it with the Bash tool's maximum timeout (600000 ms) instead of polling with sleep:
 ```bash
 gh pr checks <pr-url> --watch > /dev/null; gh pr checks <pr-url>
 ```
 
-If no checks are reported yet, wait about 15 seconds and try once more. If there are still none, skip to Step 6. If checks are still pending after 30 minutes, stop and report them as pending.
+If the command times out, run it again, up to three times in total (about 30 minutes). If checks are still pending after that, stop and report them as pending. If no checks are reported yet, run it once more. If there are still none, skip to Step 6.
 
 Don't fix failures here. This context can't run code review, and every push must be reviewed. Diagnose each failing check for the caller instead:
 1. List the failures with `gh pr checks <pr-url> --json name,state,link`. For GitHub Actions checks the run ID is the number after `/runs/` in the link.
