@@ -23,7 +23,6 @@ llmenv/
 │       ├── settings.json                  # Merged output (gitignored, generated)
 │       ├── skills/                        # Skills (each in own directory)
 │       │   ├── perform-review/SKILL.md
-│       │   ├── pr-wrapup/SKILL.md
 │       │   ├── reading-jira-tickets/SKILL.md
 │       │   └── refactor-pr-mergeability/SKILL.md
 │       └── agents/                        # Specialized agents
@@ -32,10 +31,8 @@ llmenv/
 │           ├── dead-code-cleaner.md
 │           ├── documentation-updater.md
 │           ├── performance-optimizer.md
-│           ├── ruby-expert.md
 │           ├── security-privacy-reviewer.md
-│           ├── test-quality-enforcer.md
-│           └── typescript-expert.md
+│           └── test-quality-enforcer.md
 ├── bin/
 │   └── merge-settings     # Python script for recursive settings merge
 ├── scripts/
@@ -181,7 +178,7 @@ Since `.claude` is a symlink to the repo, you can edit files directly:
 vim ~/.claude/CLAUDE.md
 
 # Edit a skill
-vim ~/.claude/skills/pr-wrapup/SKILL.md
+vim ~/.claude/skills/merge-default-branch/SKILL.md
 
 # Edit an agent
 vim ~/.claude/agents/code-reviewer.md
@@ -229,7 +226,6 @@ docker-compose exec llmenv ls -la ~/.claude
 Skills are automatically loaded by Claude Code:
 
 - **perform-review**: Orchestrates parallel code review agents for comprehensive feedback
-- **pr-wrapup**: Pushes the branch, opens a draft PR, and reports CI results. Claude runs it after `/do-code-review` at the end of a session
 - **reading-jira-tickets**: Read and search JIRA tickets from the command line
 - **refactor-pr-mergeability**: Refactors large branches into smaller, logical commits or PR stacks
 
@@ -242,10 +238,8 @@ Specialized agents for different tasks:
 - **dead-code-cleaner**: Identifies dead, unused, or poorly utilized code
 - **documentation-updater**: Updates documentation after code changes
 - **performance-optimizer**: Identifies performance optimization opportunities
-- **ruby-expert**: Ruby and Rails specialist
 - **security-privacy-reviewer**: Reviews code for security vulnerabilities
 - **test-quality-enforcer**: Verifies test coverage and quality
-- **typescript-expert**: TypeScript development specialist
 
 ## Benefits
 
