@@ -3,10 +3,10 @@
 PreToolUse hook for Bash commands that run git.
 
 Denies commands that skip git hooks (such as gitleaks): --no-verify and its
-abbreviations, -n in a `git commit` or `git am` flag group, setting
-core.hooksPath, and env vars that hook managers read to skip hooks. Asks
-before force pushes, including forms the glob ask rules can't express, like
-`git -C <path> push -uf`.
+abbreviations, -n in a `git commit` or `git am` flag group, overriding
+core.hooksPath with -c, and env vars that hook managers read to skip hooks.
+Asks before `git config` sets core.hooksPath, and before force pushes,
+including forms the glob ask rules can't express, like `git -C <path> push -uf`.
 
 Glob permission rules can't express these without also matching commit
 message text, so this parses the command instead. It guards against an agent
@@ -22,15 +22,18 @@ from typing import NoReturn, Optional
 
 CONTROL_CHARS = set(";&|()\n")
 
-# Heredoc bodies are message text, not commands. Dropping them before lexing
-# keeps quotes and flag-like words inside a message from being parsed.
-HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?\n\s*\2\s*(?=\n|\)|$)", re.S)
+# Heredoc bodies are usually message text, not commands. Dropping them before
+# lexing keeps quotes and flag-like words inside a message from being parsed.
+# The rest of the marker line is still command text, so it is kept.
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1([^\n]*)\n(.*?)\n\s*\2\s*(?=\n|\)|$)", re.S)
 
 # Words that can run the command after them.
 COMMAND_PREFIXES = {
-    "command", "builtin", "exec", "time", "nice", "nohup", "timeout", "xargs",
+    "command", "builtin", "env", "exec", "time", "nice", "nohup", "timeout", "xargs",
     "!", "{", "then", "do", "else", "if", "while", "until",
 }
+# Numeric arguments to prefixes, like `nice -n 10` or `timeout 30s`.
+PREFIX_ARGUMENT = re.compile(r"^\d+(\.\d+)?[smhd]?$")
 SHELLS = {"sh", "bash", "zsh"}
 EXPORT_COMMANDS = {"export", "declare", "typeset", "local", "readonly"}
 
@@ -72,9 +75,18 @@ NO_VERIFY = "--no-verify"
 SHORTEST_NO_VERIFY_PREFIX = len("--no-veri")
 
 
+def replace_heredoc(match: re.Match) -> str:
+    """Drop a heredoc body, unless it's fed to a shell and so runs as commands."""
+    words_before = match.string[:match.start()].split()
+    rest_of_line, body = match.group(3), match.group(4)
+    if words_before and os.path.basename(words_before[-1]) in SHELLS:
+        return f"{rest_of_line}\n{body}\n"
+    return f"<<HEREDOC{rest_of_line}"
+
+
 def split_simple_commands(command: str) -> list[list[str]]:
     """Split a shell command into the token lists of its simple commands."""
-    command = HEREDOC.sub("<<HEREDOC", command)
+    command = HEREDOC.sub(replace_heredoc, command)
     command = command.replace("\\\n", " ").replace("`", "\n")
     lexer = shlex.shlex(command, posix=True, punctuation_chars="();<>|&\n")
     lexer.whitespace = " \t\r"
@@ -163,6 +175,27 @@ def sets_hooks_path_in_config(args: list[str]) -> bool:
     return False
 
 
+def shell_command_string(args: list[str]) -> Optional[str]:
+    """Return the script a shell runs with -c (including groups like -lc), or None."""
+    for position, token in enumerate(args):
+        if not token.startswith("-") or token.startswith("--"):
+            return None
+        if "c" in token[1:]:
+            return args[position + 1] if position + 1 < len(args) else None
+    return None
+
+
+def rebase_exec_commands(args: list[str]) -> list[str]:
+    """Return the commands passed to `git rebase --exec` or `-x`."""
+    commands = []
+    for position, token in enumerate(args):
+        if token in ("--exec", "-x") and position + 1 < len(args):
+            commands.append(args[position + 1])
+        elif token.startswith("--exec="):
+            commands.append(token.split("=", 1)[1])
+    return commands
+
+
 def resolve_alias(subcommand: str) -> list[str]:
     """Expand a git alias such as `ci = commit` into its words."""
     # git ignores aliases that shadow built-in commands, so skip the lookup.
@@ -204,8 +237,15 @@ def check_git_args(args: list[str]) -> Optional[tuple[str, str]]:
     words = resolve_alias(args[subcommand_index]) + args[subcommand_index + 1:]
     subcommand, subcommand_args = words[0], words[1:]
 
+    # Setting core.hooksPath can install hooks (husky's `.githooks`) as well
+    # as disable them, so ask rather than deny.
     if subcommand == "config" and sets_hooks_path_in_config(subcommand_args):
-        return "deny", "sets core.hooksPath"
+        return "ask", "sets core.hooksPath, which can disable git hooks"
+    if subcommand == "rebase":
+        for exec_command in rebase_exec_commands(subcommand_args):
+            result = check_command(exec_command)
+            if result:
+                return result
     if has_long_no_verify(subcommand_args):
         return "deny", f"uses --no-verify on git {subcommand}"
     short_flags = SHORT_NO_VERIFY_SUBCOMMANDS.get(subcommand)
@@ -223,10 +263,11 @@ def check_simple_command(tokens: list[str]) -> Optional[tuple[str, str]]:
         if is_assignment(token):
             env_names.append(token.split("=", 1)[0])
             continue
-        if token in COMMAND_PREFIXES or token.startswith("-") or token.isdigit():
+        if token in COMMAND_PREFIXES or token.startswith("-") or PREFIX_ARGUMENT.match(token):
             continue
-        if os.path.basename(token) in SHELLS and position + 2 < len(tokens) and tokens[position + 1] == "-c":
-            return check_command(tokens[position + 2])
+        if os.path.basename(token) in SHELLS:
+            script = shell_command_string(tokens[position + 1:])
+            return check_command(script) if script else None
         if os.path.basename(token) == "git":
             skip_vars = HOOK_SKIP_ENV_VARS.intersection(env_names)
             if skip_vars:

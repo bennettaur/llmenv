@@ -25,7 +25,7 @@ DENY|git push --no-verify
 DENY|git push -u origin b --no-verify
 DENY|cd repo && git commit -an -m "x"
 DENY|git -c core.hooksPath=/dev/null commit -m x
-DENY|git config core.hooksPath /tmp/empty
+ASK|git config core.hooksPath /tmp/empty
 DENY|SKIP=gitleaks git commit -m x
 DENY|HUSKY=0 git commit -m x
 DENY|/usr/bin/git commit -n
@@ -64,7 +64,7 @@ DENY|git -ccore.hooksPath=/dev/null commit -m x
 DENY|git am -n x.patch
 DENY|GIT_CONFIG_GLOBAL=/tmp/cfg git commit -m x
 DENY|LEFTHOOK_EXCLUDE=gitleaks git commit -m x
-DENY|git config set core.hooksPath /tmp/x
+ASK|git config set core.hooksPath /tmp/x
 DENY|echo `git commit -n`
 ASK|git push --force
 ASK|git push --force-with-lease origin b
@@ -86,6 +86,20 @@ ALLOW|echo git commit -n
 ALLOW|grep -rn git src
 ALLOW|git commit -mn
 ALLOW|git commit --message -n
+DENY|env HUSKY=0 git commit -m x
+DENY|cd repo \&\& env SKIP=gitleaks git commit -m x
+DENY|env git commit -n -m x
+DENY|cat > /tmp/msg <<'EOF2' \&\& git commit -n -F /tmp/msg\nFix thing\nEOF2
+DENY|git commit -F - <<'EOF2' --no-verify\nFix thing\nEOF2
+DENY|bash -lc 'git commit -n -m x'
+DENY|bash -l -c 'git commit -n -m x'
+DENY|timeout 30s git push --no-verify
+DENY|bash <<'EOF2'\ngit commit -n -m x\nEOF2
+DENY|git rebase -i --exec 'git commit --amend --no-verify' HEAD~2
+DENY|git rebase -x 'git commit -n' HEAD~2
+ASK|git config core.hooksPath .githooks
+ALLOW|bash scripts/build.sh
+ALLOW|git rebase --exec 'make test' HEAD~3
 CASES
 echo "$failures failure(s)"
 [ "$failures" -eq 0 ]
