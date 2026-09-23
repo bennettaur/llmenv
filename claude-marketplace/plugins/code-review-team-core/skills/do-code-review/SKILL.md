@@ -135,7 +135,7 @@ Based on the context, select relevant reviewers to launch:
 6. **Follow-up actions**
    If blocking issues found:
    - Fix issues before proceeding to PR
-   - Re-run affected reviewers to verify fixes
+   - Re-run affected reviewers to verify fixes, for at most two rounds. If blocking issues remain after that, stop and report them instead of proceeding to PR
 
    If only improvements suggested:
    - Implement the ones that are valid and serve the task's goal, then proceed with the PR

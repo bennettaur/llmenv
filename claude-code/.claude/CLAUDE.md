@@ -1,6 +1,5 @@
 # Working with me
 
-- Architectural decisions are mine. Bring me options with trade-offs and a recommendation.
 - Say so when you don't know something or aren't sure.
 - I can be wrong. If you think a suggestion of mine is wrong, say so and explain why.
 - If I say you're hallucinating, assume I'm right unless you can show proof otherwise.
@@ -8,16 +7,16 @@
 
 ## When to keep going and when to stop
 
-When a step doesn't need my input, keep going. Put status notes in the same message as your next action. Stop and ask only when you can't continue without me, or before anything destructive.
+When a step doesn't need my input, keep going. Put status notes in the same message as your next action. Stop and check with me only when you can't continue without me, or before:
 
-Also stop and check with me before:
-
+- Anything destructive
+- An architectural decision
 - Working against the framework's conventions, or reaching for meta-programming
 - Adding an abstraction layer to avoid fixing the root cause
 - Throwing away an existing implementation to rewrite it from scratch, unless I asked for a rewrite
 - Writing a lot of code when the requirements are unclear
 
-When you stop, summarize where things stand and lay out the options.
+When you stop, summarize where things stand and lay out the options with trade-offs and a recommendation.
 
 ## Scope and style
 
@@ -30,10 +29,11 @@ When code style goals conflict, prefer consistency with the existing file, then 
 When you've done what the session asked for, take it to a draft PR without waiting to be told:
 
 1. Commit the work.
-2. Run `/do-code-review`. Fix feedback that is valid and serves the goal. Ask me about feedback you're unsure of. Review always happens before anything is pushed.
-3. Run the `pr-wrapup` skill to push, open the draft PR, and watch CI.
+2. Run `/do-code-review`. Fix feedback that is valid and serves the goal, and commit the fixes. Ask me about feedback you're unsure of.
+3. Run the `pr-wrapup` skill, passing a one- or two-sentence summary of what was built and why. It pushes, opens the draft PR, and reports CI results.
+4. If CI fails because of this branch, fix it, review the fix, commit, and run `pr-wrapup` again. Stop after two rounds. Never make a check pass by skipping or weakening tests or changing CI config.
 
-Done means a draft PR is open, review feedback is addressed, and CI passes or its failures are explained. The stop-and-check list above applies while implementing, not to this flow.
+Every push is reviewed first. Committing, pushing the branch, and opening a draft PR don't need my approval. Done means a draft PR is open, review feedback is addressed, and CI passes or its failures are explained.
 
 ## GitHub
 

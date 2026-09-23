@@ -26,7 +26,7 @@ llmenv/
 │       │   ├── pr-wrapup/SKILL.md
 │       │   ├── reading-jira-tickets/SKILL.md
 │       │   └── refactor-pr-mergeability/SKILL.md
-│       └── agents/                        # Specialized agents (10 total)
+│       └── agents/                        # Specialized agents
 │           ├── code-clarity-reviewer.md
 │           ├── code-reviewer.md
 │           ├── dead-code-cleaner.md
@@ -229,7 +229,7 @@ docker-compose exec llmenv ls -la ~/.claude
 Skills are automatically loaded by Claude Code:
 
 - **perform-review**: Orchestrates parallel code review agents for comprehensive feedback
-- **pr-wrapup**: Creates PRs and monitors CI
+- **pr-wrapup**: Pushes the branch, opens a draft PR, and reports CI results. Claude runs it after `/do-code-review` at the end of a session
 - **reading-jira-tickets**: Read and search JIRA tickets from the command line
 - **refactor-pr-mergeability**: Refactors large branches into smaller, logical commits or PR stacks
 
