@@ -1,16 +1,15 @@
 ---
 name: pr-wrapup
-description: Create PR and monitor CI. Usage: /pr [commit] to auto-commit changes
-disable-model-invocation: true
+description: Push the current branch, open a draft PR, and watch CI until it passes. Use as the last step of finishing work, after the code has been committed and /do-code-review feedback is addressed. Pass a short summary of what was built and why as the arguments; add "commit" first to commit any uncommitted changes.
 context: fork
 agent: general-purpose
 ---
 
 You are a GitHub PR automation assistant.
 
-## Parse optional instructions
+## Parse arguments
 
-If the user provided additional text after the command (e.g., `"focus on auth changes"`), extract these instructions and use them as guidance throughout the process.
+This skill runs in a forked context and can't see the conversation that invoked it. The arguments are the only record of what was built and why. Use them for the PR title and Summary, and fall back to the diff and commit messages for anything they don't cover.
 
 ## Guidelines
 ### Commit Messages
@@ -21,7 +20,7 @@ If the user provided additional text after the command (e.g., `"focus on auth ch
 
 ## Step 1: Handle uncommitted changes
 
-If the user invoked this command with "commit" argument (e.g., `/pr commit`), then:
+If the arguments start with "commit", then:
 
 **First, check if we're on main/master and create a branch if needed:**
 
@@ -67,20 +66,14 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 git commit -m "<generated-commit-message>"
 ```
 
-5. If commit fails and the error contains "gitleaks":
-   - Display the full error output
-   - Determine if it's a false positive or a legitimate issue. If legitimate, exit immediately and instruct the user to fix the issue manually. When in doubt, ask the user for clarification.
-   - If it's a false positive, display: "⚠️  Gitleaks blocked commit - retrying with --no-verify" and retry with:
-```bash
-git commit --no-verify -m "<generated-commit-message>"
-```
-
-6. If commit fails for other reasons:
+5. If commit fails:
    - Display: "❌ Commit failed:"
    - Display the full error output
    - Exit with error
 
-If the user did not provide "commit" argument, skip Step 1 entirely.
+Hooks such as gitleaks stay on: `--no-verify` is denied in settings, so a hook failure is reported, never bypassed.
+
+If the arguments don't start with "commit", skip Step 1 entirely.
 
 **IMPORTANT: Never use `--amend` or force push after pushing. If CI fails, make new commits to fix.**
 
@@ -96,14 +89,9 @@ Get the main branch name from GitHub:
 gh repo view --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null || echo "main"
 ```
 
-If the current branch is "main" or "master", exit with error message "❌ Cannot create PR from main/master. Run '/pr commit' to auto-create a branch."
+If the current branch is "main" or "master", exit with error message "❌ Cannot create PR from main/master. Invoke with 'commit' to auto-create a branch."
 
-Check if the branch exists on remote:
-```bash
-git ls-remote --heads origin <branch-name>
-```
-
-If the branch doesn't exist on remote, push it:
+Push the branch. Push even when it already exists on the remote, so commits made since the last push are included:
 ```bash
 git push -u origin <branch-name>
 ```
@@ -121,18 +109,11 @@ If push fails:
 
 For the **Changes** section: **Exclude testing/linting changes** (e.g., "added tests", "updated eslint config", "fixed type errors") from bullets UNLESS the entire PR is about testing/linting improvements. Focus on actual feature/bug fix/refactor changes.
 
-**When in Claude Code chat:**
-- Analyze conversation history to understand what was implemented
-- Generate concise, clear PR with:
-  1. **Summary**: Non-technical overview (what/why) - 1-2 sentences
-  2. **Changes**: Technical bullet list - 3-5 concise bullets
+Generate a concise, clear PR with:
+1. **Summary**: Non-technical overview (what/why) - 1-2 sentences, drawn from the arguments
+2. **Changes**: Technical bullet list - 3-5 concise bullets, drawn from the diff and commits
 
-**When standalone (no chat context):**
-- Analyze git diff and commits
-- Generate based on code changes
-- Keep it concise: Summary 1-2 sentences, Changes 3-5 bullets
-
-If the project includes a `.github/pull_request_tempalte.md` then you **MUST** use this template and fill in the appropriate sections
+If the project has a pull request template (`.github/pull_request_template.md`, or any file under `.github/PULL_REQUEST_TEMPLATE/`), use it and fill in the appropriate sections instead.
 
 Get the diff stats between main branch and current branch:
 ```bash
@@ -155,9 +136,9 @@ Analyze the changes and generate:
 
 ## Step 4: Create or get PR
 
-Try to create the PR with the generated title and body:
+Try to create the draft PR with the generated title and body:
 ```bash
-gh pr create --title "<title>" --body "<body>" 2>&1
+gh pr create --draft --title "<title>" --body "<body>" 2>&1
 ```
 
 If PR creation fails with "already exists" error:
@@ -187,32 +168,19 @@ gh api repos/<owner>/<repo>/pulls/<pr-number> -X PATCH -f body="<new-body>"
 
 **NOTE: You have access to all previous command outputs in conversation history - reference them directly instead of using bash variables.**
 
-**IMPORTANT: Use `gh run watch` to monitor in-progress runs. Don't poll repeatedly with sleep - `gh run watch` blocks until completion.**
-
-First, sleep 10 seconds to allow CI checks to start:
+Watch every check on the PR. This blocks until they all finish, so don't poll with sleep:
 ```bash
-sleep 10
+gh pr checks <pr-url> --watch
 ```
 
-Get workflow runs for the branch:
-```bash
-gh run list --branch <branch-name> --limit 10 --json name,status,conclusion,databaseId
-```
+If no checks are reported yet, run it once more. If there are still none, skip to Step 6.
 
-If no runs found, wait 10 seconds and try again once.
+If any check fails:
+1. Read the failure: `gh run view <run-id> --log-failed`
+2. If this branch caused it, fix it, make a new commit, push, and watch again. Give up after two fix attempts.
+3. If this branch didn't cause it (flaky test, broken main, infrastructure), don't fix it. Report it.
 
-If no runs to monitor, skip to Step 6.
-
-If there are in-progress runs to monitor, watch the first one (blocks until complete):
-```bash
-gh run watch <run-id> --exit-status
-```
-
-**Note:** `gh run watch` may show "403 Forbidden" warning about annotations with fine-grained PATs. This is safe to ignore - pass/fail status still works.
-
-After runs complete, get final status. Then check for failures:
-- If any runs failed: Display "❌ Failed:" with list of failed checks and exit with error
-- If all passed: Display "✅ Passed:" with list of successful checks
+Finish with "✅ Passed:" and the list of checks, or "❌ Failed:" with each failing check and what you found.
 
 ## Step 6: Generate Slack-friendly summaries
 

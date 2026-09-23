@@ -24,19 +24,14 @@ llmenv/
 │       ├── skills/                        # Skills (each in own directory)
 │       │   ├── perform-review/SKILL.md
 │       │   ├── pr-wrapup/SKILL.md
-│       │   ├── react/SKILL.md
 │       │   ├── reading-jira-tickets/SKILL.md
-│       │   ├── refactor-pr-mergeability/SKILL.md
-│       │   ├── ruby/SKILL.md
-│       │   ├── terraform/SKILL.md
-│       │   └── typescript/SKILL.md
+│       │   └── refactor-pr-mergeability/SKILL.md
 │       └── agents/                        # Specialized agents (10 total)
 │           ├── code-clarity-reviewer.md
 │           ├── code-reviewer.md
 │           ├── dead-code-cleaner.md
 │           ├── documentation-updater.md
 │           ├── performance-optimizer.md
-│           ├── pr-readiness-assessment.md
 │           ├── ruby-expert.md
 │           ├── security-privacy-reviewer.md
 │           ├── test-quality-enforcer.md
@@ -132,7 +127,7 @@ Create `claude-code/.claude/settings.wealthsimple.json`:
 ```json
 {
   "enabledPlugins": {
-    "superpowers@ws-claude-marketplace": true
+    "ws-staging@ws-claude-marketplace": true
   },
   "extraKnownMarketplaces": {
     "ws-claude-marketplace": {
@@ -186,7 +181,7 @@ Since `.claude` is a symlink to the repo, you can edit files directly:
 vim ~/.claude/CLAUDE.md
 
 # Edit a skill
-vim ~/.claude/skills/typescript.md
+vim ~/.claude/skills/pr-wrapup/SKILL.md
 
 # Edit an agent
 vim ~/.claude/agents/code-reviewer.md
@@ -235,12 +230,8 @@ Skills are automatically loaded by Claude Code:
 
 - **perform-review**: Orchestrates parallel code review agents for comprehensive feedback
 - **pr-wrapup**: Creates PRs and monitors CI
-- **react**: React development patterns
 - **reading-jira-tickets**: Read and search JIRA tickets from the command line
 - **refactor-pr-mergeability**: Refactors large branches into smaller, logical commits or PR stacks
-- **ruby**: Ruby and Rails development
-- **terraform**: Infrastructure-as-code guidelines
-- **typescript**: TypeScript and modern JavaScript development
 
 ## Available Agents
 
@@ -251,7 +242,6 @@ Specialized agents for different tasks:
 - **dead-code-cleaner**: Identifies dead, unused, or poorly utilized code
 - **documentation-updater**: Updates documentation after code changes
 - **performance-optimizer**: Identifies performance optimization opportunities
-- **pr-readiness-assessment**: Assesses whether a branch is ready for PR review
 - **ruby-expert**: Ruby and Rails specialist
 - **security-privacy-reviewer**: Reviews code for security vulnerabilities
 - **test-quality-enforcer**: Verifies test coverage and quality
