@@ -18,7 +18,6 @@ This approach (Agent tool + preloaded skills) replaces the previous `context: fo
 Based on the context, select relevant reviewers to launch:
 
 **Always run:**
-- `superpowers:code-reviewer` - (If it's available) Reviews against original plan and coding standards
 - `code-clarity-reviewer` - Reviews code readability, comments, and beginner-friendliness
 - `security-privacy-reviewer` - Identifies security vulnerabilities and privacy risks
 - `scope-drift-reviewer` - Detects changes that drift from the original goal or prompt
@@ -136,17 +135,15 @@ Based on the context, select relevant reviewers to launch:
 6. **Follow-up actions**
    If blocking issues found:
    - Fix issues before proceeding to PR
-   - Re-run affected reviewers to verify fixes
+   - Re-run affected reviewers to verify fixes, for at most two rounds. If blocking issues remain after that, stop and report them instead of proceeding to PR
 
    If only improvements suggested:
-   - Ask user whether to implement improvements or proceed with PR
-   - Respect user's decision on scope
+   - Implement the ones that are valid and serve the task's goal, then proceed with the PR
+   - Ask the user only about improvements whose validity or scope you're unsure of
 
 ## Reviewer-Specific Context
 
 When crafting the `prompt` for each Agent call, include the following context:
-
-**superpowers:code-reviewer**: Requires implementation plan context. If no plan exists, skip or use general coding standards.
 
 **code-clarity-reviewer**: Focus on whether code tells a story and is accessible to team members.
 

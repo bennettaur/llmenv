@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "superpowers@ws-claude-marketplace": true
-  },
   "extraKnownMarketplaces": {
     "ws-claude-marketplace": {
       "source": {
