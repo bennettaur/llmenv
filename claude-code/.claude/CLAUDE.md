@@ -208,7 +208,7 @@ ALWAYS push PRs up as drafts, unless explicitely instructed to do otherwise
 - Keep configuration files at the root or in a dedicated config directory
 
 ## Pull Request Guidelines
-- Run the `/do-code-review` skill for a thorough self-review of the code. Assess any feedback it returns for validity and whether it impacts the goal of our implementation. If you're unsure, ask the user about the validity of the feedback
+- Run the `/do-code-review` skill for a thorough self-review of the code NOTE DO NOT CONFUSE THIS WITH `code-review` or any similarly named skill, tool, or dynamic workflow. Assess any feedback it returns for validity and whether it impacts the goal of our implementation. If you're unsure, ask the user about the validity of the feedback
 - Use the pr-readiness-assessment agent to determine whether we are ready to submit a high-quality PR
 - If we are indeed ready to submit a PR, use the pr-wrapup skill
 

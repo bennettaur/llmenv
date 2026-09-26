@@ -257,5 +257,9 @@
   "theme": "dark",
   "tui": "fullscreen",
   "autoCompactEnabled": false,
-  "teammateMode": "tmux"
+  "teammateMode": "tmux",
+  "enabledMcpjsonServers": [
+    "yarvis"
+  ],
+  "enableAllProjectMcpServers": true
 }
