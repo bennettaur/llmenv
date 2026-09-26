@@ -1,6 +1,7 @@
 ---
 name: merge-default-branch
 description: Merge the origin remote's default branch (main or master, whichever the repo uses) into the current branch and resolve any merge conflicts intelligently — by understanding what the incoming changes were doing and what the current branch (the PR) is doing, then combining their intent rather than blindly picking a side. Use this whenever the user wants to bring their branch up to date with main/master, "merge in main", "catch up with the default branch", "update my branch", or "merge and fix the conflicts", and when a PR is behind its base branch and needs the latest changes merged in.
+model: sonnet
 ---
 
 # Merge the Default Branch and Resolve Conflicts

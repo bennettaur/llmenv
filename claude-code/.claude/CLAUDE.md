@@ -29,7 +29,7 @@ When code style goals conflict, prefer consistency with the existing file, then 
 When you've done what the session asked for, take it to a draft PR without waiting to be told:
 
 1. Commit the work.
-2. Run `/do-code-review`. Fix feedback that is valid and serves the goal, and commit the fixes. Ask me about feedback you're unsure of.
+2. Run `/do-code-review` (not `code-review` or any similarly named skill, tool, or workflow). Fix feedback that is valid and serves the goal, and commit the fixes. Ask me about feedback you're unsure of.
 3. Push the branch and open a draft PR with `gh pr create --draft`. Use the repo's PR template if it has one. Otherwise write a one- or two-sentence summary of what changed and why, plus a few bullets on the main changes.
 
 Every push is reviewed first. Committing, pushing the branch, and opening a draft PR don't need my approval. Done means a draft PR is open and review feedback is addressed.
