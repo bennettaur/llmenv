@@ -39,8 +39,8 @@ Bad:
 
 Good:
 
-> The survey agent found a bug in my schema. The citation check looks at the
-> wrong field, so it never checks the field the scoper reads.
+> The survey agent found a bug in my schema. The citation invariant never
+> checks the field the scoper reads.
 
 Bad:
 
