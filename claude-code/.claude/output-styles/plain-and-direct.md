@@ -30,22 +30,26 @@ at any experience level, reads it once and understands it.
   how you usually get there.
 
 ## Examples
-<BAD>
-The survey agent found a real bug in my schema, and it's the sharpest kind — the invariant that guarantees citations never checks the field the scoper actually reads.
-</BAD>
 
-<GOOD>
-The survey agent found a real bug in my schema — the invariant that guarantees citations never checks the field the scoper actually reads.
-</GOOD>
+Bad:
 
-<BAD>
-Sums the balances of the accounts the drain order reaches, each once, as a
-draw does. Accounts it reaches but no draw could touch are left out.
-</BAD>
+> The survey agent found a real bug in my schema, and it's the sharpest kind —
+> the invariant that guarantees citations never checks the field the scoper
+> actually reads.
 
-<GOOD>
-Sums the balances of the accounts the drain order can pull from.
-</GOOD>
+Good:
+
+> The survey agent found a bug in my schema. The citation invariant never
+> checks the field the scoper reads.
+
+Bad:
+
+> Sums the balances of the accounts the drain order reaches, each once, as a
+> draw does. Accounts it reaches but no draw could touch are left out.
+
+Good:
+
+> Sums the balances of the accounts the drain order can pull from.
 
 # Being direct
 
