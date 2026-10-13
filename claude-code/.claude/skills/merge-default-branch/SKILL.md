@@ -1,6 +1,6 @@
 ---
 name: merge-default-branch
-description: Merge the origin remote's default branch (main or master, whichever the repo uses) into the current branch and resolve any merge conflicts intelligently — by understanding what the incoming changes were doing and what the current branch (the PR) is doing, then combining their intent rather than blindly picking a side. Use this whenever the user wants to bring their branch up to date with main/master, "merge in main", "catch up with the default branch", "update my branch", or "merge and fix the conflicts", and when a PR is behind its base branch and needs the latest changes merged in.
+description: Merge the origin remote's default branch (main or master, whichever the repo uses) into the current branch and resolve any merge conflicts intelligently — by understanding what the incoming changes were doing and what the current branch (the PR) is doing, then combining their intent rather than blindly picking a side, then pushing the branch so CI runs on the merged result. Use this whenever the user wants to bring their branch up to date with main/master, "merge in main", "catch up with the default branch", "update my branch", or "merge and fix the conflicts", and when a PR is behind its base branch and needs the latest changes merged in.
 model: sonnet
 ---
 
@@ -105,9 +105,9 @@ A merge can be textually clean but semantically broken, so check the merged resu
 
 If verification fails:
 - If the failure is caused by the merge (a semantic conflict the text-merge missed), fix it the same way as a normal conflict — by reconciling both sides' intent — then re-verify.
-- If you can't confidently fix it, **stop and report** rather than committing broken code. Show the user the failure and the conflicts you resolved. Do not finalize a merge that doesn't pass verification.
+- If you can't confidently fix it, **stop and report** rather than committing broken code. Show the user the failure and the conflicts you resolved. Do not commit or push a merge that doesn't pass verification.
 
-## Step 7: Complete the merge and report
+## Step 7: Complete the merge, push, and report
 
 Once conflicts are resolved and verification passes, finalize the merge commit:
 
@@ -117,14 +117,23 @@ git commit --no-edit
 
 (`--no-edit` keeps git's default merge message. If you stashed in Step 1, `git stash pop` now and resolve any conflicts the same way.)
 
+Then push the current branch, so CI runs against the merged code:
+
+```bash
+git push
+```
+
+If the branch has no upstream yet, use `git push -u origin HEAD`. Never force push — a merge only adds commits, so a plain push is always enough. If the push is rejected because the remote branch has commits you don't have, merge the remote branch the same way (`git pull --no-rebase`), verify again, and push. If a pre-push hook fails, fix the cause or report it; don't skip the hook with `--no-verify`.
+
 Then report to the user:
 - Which default branch was merged in and how many commits it brought.
 - Each conflict you resolved and the reasoning — especially any "combine both" or "re-apply on top of refactor" decisions, since those are where a wrong call hides.
 - The verification results (what you ran, that it passed).
-- How to undo if they disagree with anything: `git reset --hard ORIG_HEAD` returns the branch to exactly its pre-merge state. (Before the commit in this step, `git merge --abort` would do the same.)
+- That the branch was pushed, so CI is running on the merged result.
+- How to undo if they disagree with anything: `git revert -m 1 HEAD` undoes the merge with a new commit, which can be pushed normally. `git reset --hard ORIG_HEAD` also returns the branch to its pre-merge state, but since the merge is already pushed, it needs a force push to take effect on the remote.
 
 ## Notes
 
-- This skill merges; it does not rebase or push. Pushing is the user's call.
-- It only reads from `origin` (`git fetch`) and writes to the local current branch — it never modifies the default branch or any remote.
+- This skill merges and pushes; it does not rebase.
+- It reads from `origin` (`git fetch`) and writes only to the current branch, locally and on `origin`. It never modifies the default branch.
 - If the merge gets into a state you don't understand, `git merge --abort` is always safe before the merge is committed and returns you to the starting point.
