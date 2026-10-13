@@ -40,6 +40,8 @@ git remote set-head origin --auto
 
 If detection still fails (no network, unusual setup), fall back to checking which of `origin/main` / `origin/master` exists (`git branch -r`), and if both or neither do, ask the user. Call the result `<default>` (e.g. `origin/main`) below.
 
+If the current branch from Step 1 has the same name as `<default>` (e.g. you're on `main` and `<default>` is `origin/main`), stop and tell the user. Step 7 pushes, and it must never push to the default branch.
+
 ## Step 3: Build context BEFORE merging
 
 This is the step that makes the difference between a thoughtful merge and a guess. Before merging, learn what each side changed since they diverged:
@@ -129,7 +131,7 @@ The explicit `origin HEAD` pushes to `origin/<current-branch>` even if the branc
 
 If the push fails:
 - **Rejected because `origin/<current-branch>` has commits you don't have** (someone else pushed to the branch): run `git pull --no-rebase origin <current-branch>`, resolve any conflicts as in Step 5, verify as in Step 6, commit, then push again.
-- **A pre-push hook fails**: fix the cause in a new commit, verify again, and push. If you can't fix it, stop and report. Never skip hooks with `--no-verify`, on push or on commit.
+- **A pre-push hook fails**: if the merge caused the failure, fix it in a new commit, verify again, and push. Otherwise, or if you can't fix it, stop and report. Never skip hooks with `--no-verify`, on push or on commit.
 - **Rejected for any other reason** (branch protection, missing permissions): stop and report the error. Don't work around it.
 
 Then report to the user:
