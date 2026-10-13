@@ -1,6 +1,6 @@
 ---
 name: merge-default-branch
-description: Merge the origin remote's default branch (main or master, whichever the repo uses) into the current branch and resolve any merge conflicts intelligently — by understanding what the incoming changes were doing and what the current branch (the PR) is doing, then combining their intent rather than blindly picking a side, then pushing the branch so CI runs on the merged result. Use this whenever the user wants to bring their branch up to date with main/master, "merge in main", "catch up with the default branch", "update my branch", or "merge and fix the conflicts", and when a PR is behind its base branch and needs the latest changes merged in.
+description: Merge the origin remote's default branch (main or master, whichever the repo uses) into the current branch and resolve any merge conflicts intelligently — by understanding what the incoming changes were doing and what the current branch (the PR) is doing, then combining their intent rather than blindly picking a side. Then pushes the branch so CI runs on the merged result. Use this whenever the user wants to bring their branch up to date with main/master, "merge in main", "catch up with the default branch", "update my branch", or "merge and fix the conflicts", and when a PR is behind its base branch and needs the latest changes merged in.
 model: sonnet
 ---
 
@@ -16,7 +16,7 @@ A textual merge that "succeeds" can still be broken — the default branch may h
    ```bash
    git rev-parse --abbrev-ref HEAD
    ```
-   If this is the default branch itself (e.g. you're on `main`), there's nothing to merge in — stop and tell the user.
+   If this is the default branch itself (e.g. you're on `main`), there's nothing to merge in — stop and tell the user. If it prints `HEAD`, you're in detached HEAD state with no branch to push — stop and tell the user.
 
 2. Check the working tree is clean:
    ```bash
@@ -115,25 +115,32 @@ Once conflicts are resolved and verification passes, finalize the merge commit:
 git commit --no-edit
 ```
 
-(`--no-edit` keeps git's default merge message. If you stashed in Step 1, `git stash pop` now and resolve any conflicts the same way.)
+(`--no-edit` keeps git's default merge message. A clean merge in Step 4 already created the merge commit, so skip this command in that case. If you stashed in Step 1, `git stash pop` now and resolve any conflicts the same way. The popped changes stay uncommitted and are not part of the push.)
 
-Then push the current branch, so CI runs against the merged code:
+Note the merge commit's SHA (`git rev-parse HEAD`) for the report.
+
+Then push the current branch to its same-named branch on `origin`, so CI runs against the merged result:
 
 ```bash
-git push
+git push -u origin HEAD
 ```
 
-If the branch has no upstream yet, use `git push -u origin HEAD`. Never force push — a merge only adds commits, so a plain push is always enough. If the push is rejected because the remote branch has commits you don't have, merge the remote branch the same way (`git pull --no-rebase`), verify again, and push. If a pre-push hook fails, fix the cause or report it; don't skip the hook with `--no-verify`.
+The explicit `origin HEAD` pushes to `origin/<current-branch>` even if the branch tracks something else, such as `origin/main`. Never force push. A merge only adds commits, so it never needs one.
+
+If the push fails:
+- **Rejected because `origin/<current-branch>` has commits you don't have** (someone else pushed to the branch): run `git pull --no-rebase origin <current-branch>`, resolve any conflicts as in Step 5, verify as in Step 6, commit, then push again.
+- **A pre-push hook fails**: fix the cause in a new commit, verify again, and push. If you can't fix it, stop and report. Never skip hooks with `--no-verify`, on push or on commit.
+- **Rejected for any other reason** (branch protection, missing permissions): stop and report the error. Don't work around it.
 
 Then report to the user:
 - Which default branch was merged in and how many commits it brought.
 - Each conflict you resolved and the reasoning — especially any "combine both" or "re-apply on top of refactor" decisions, since those are where a wrong call hides.
 - The verification results (what you ran, that it passed).
-- That the branch was pushed, so CI is running on the merged result.
-- How to undo if they disagree with anything: `git revert -m 1 HEAD` undoes the merge with a new commit, which can be pushed normally. `git reset --hard ORIG_HEAD` also returns the branch to its pre-merge state, but since the merge is already pushed, it needs a force push to take effect on the remote.
+- Whether the push succeeded, so CI is running on the merged result, or why it didn't.
+- How to undo if they disagree with anything: `git revert -m 1 <merge-sha>` undoes the merge with a new commit that can be pushed normally. Warn them that after this revert, merging the default branch again won't bring those changes back. They have to revert the revert first. Don't run `git reset` or force push to undo the merge unless the user explicitly asks for it.
 
 ## Notes
 
-- This skill merges and pushes; it does not rebase.
+- This skill merges and pushes; it does not rebase. Skip the push only if the user asked for a local-only merge.
 - It reads from `origin` (`git fetch`) and writes only to the current branch, locally and on `origin`. It never modifies the default branch.
 - If the merge gets into a state you don't understand, `git merge --abort` is always safe before the merge is committed and returns you to the starting point.
