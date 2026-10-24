@@ -5,9 +5,9 @@ Merge Claude Code settings files with deep recursive merge.
 This script merges settings files in order starting with a base file.
 
 Usage:
-  1. Profile mode: merge-settings --profile personal
-     Merges base with settings.personal.json
-  
+  1. Profile mode: merge-settings -p personal -p ev
+     Merges base with settings.personal.json, then settings.ev.json
+
   2. Explicit files: merge-settings file1.json file2.json
      Merges base with file1.json, then file2.json
 
@@ -18,12 +18,13 @@ Merge rules:
 """
 
 import argparse
-import difflib
+import copy
 import json
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def expand_path(path: str) -> Path:
@@ -79,11 +80,201 @@ def load_json_file(file_path: Path, verbose: bool = False) -> Dict[str, Any]:
         sys.exit(1)
 
 
-def check_for_modifications(output_path: Path, new_merged: Dict[str, Any], verbose: bool = False):
+KeyPath = Tuple[str, ...]
+
+
+@dataclass
+class Change:
+    """One difference between settings.json.spec and settings.json.
+
+    ``kind`` is one of added, removed, changed, item_added or item_removed.
+    For the item kinds, ``path`` points at the list and ``value`` is the item.
+    Otherwise ``path`` points at the key and ``value`` is its value in
+    settings.json (or in the spec, for removed).
+    """
+    kind: str
+    path: KeyPath
+    value: Any
+    old: Any = None
+
+    @property
+    def group(self) -> KeyPath:
+        if self.kind in ('item_added', 'item_removed'):
+            return self.path
+        return self.path[:-1]
+
+    def describe(self) -> str:
+        value = json.dumps(self.value)
+        if self.kind == 'added':
+            return f"+ {self.path[-1]}: {value}"
+        if self.kind == 'removed':
+            return f"- {self.path[-1]}: {value}"
+        if self.kind == 'changed':
+            return f"~ {self.path[-1]}: {json.dumps(self.old)} -> {value}"
+        if self.kind == 'item_added':
+            return f"+ {value}"
+        return f"- {value}"
+
+
+def find_changes(spec: Dict[str, Any], current: Dict[str, Any], path: KeyPath = ()) -> List[Change]:
+    """List the leaf-level differences between two settings dicts.
+
+    Lists are compared by membership, because merging concatenates them and an
+    added item can be moved into any one file's copy of the list.
+    """
+    changes: List[Change] = []
+    for key in list(spec) + [k for k in current if k not in spec]:
+        key_path = path + (key,)
+        if key not in current:
+            changes.append(Change('removed', key_path, spec[key]))
+        elif key not in spec:
+            changes.append(Change('added', key_path, current[key]))
+        elif spec[key] == current[key]:
+            continue
+        elif isinstance(spec[key], dict) and isinstance(current[key], dict):
+            changes.extend(find_changes(spec[key], current[key], key_path))
+        elif isinstance(spec[key], list) and isinstance(current[key], list):
+            changes.extend(Change('item_removed', key_path, item) for item in spec[key] if item not in current[key])
+            changes.extend(Change('item_added', key_path, item) for item in current[key] if item not in spec[key])
+        else:
+            changes.append(Change('changed', key_path, current[key], old=spec[key]))
+    return changes
+
+
+_MISSING = object()
+
+
+def get_at(data: Dict[str, Any], path: KeyPath) -> Any:
+    node: Any = data
+    for key in path:
+        if not isinstance(node, dict) or key not in node:
+            return _MISSING
+        node = node[key]
+    return node
+
+
+def can_apply(change: Change, data: Dict[str, Any]) -> bool:
+    """Removals only make sense for a file that holds the removed value."""
+    if change.kind == 'removed':
+        return get_at(data, change.path) is not _MISSING
+    if change.kind == 'item_removed':
+        items = get_at(data, change.path)
+        return isinstance(items, list) and change.value in items
+    return True
+
+
+def apply_change(change: Change, data: Dict[str, Any]):
+    parents = [data]
+    for key in change.path[:-1]:
+        parents.append(parents[-1].setdefault(key, {}))
+    parent = parents[-1]
+    key = change.path[-1]
+
+    if change.kind in ('added', 'changed'):
+        parent[key] = copy.deepcopy(change.value)
+    elif change.kind == 'removed':
+        del parent[key]
+        # Drop blocks the removal emptied, so the file doesn't keep a bare "env": {}
+        for depth in range(len(parents) - 1, 0, -1):
+            if parents[depth]:
+                break
+            del parents[depth - 1][change.path[depth - 1]]
+    elif change.kind == 'item_added':
+        items = parent.setdefault(key, [])
+        if change.value not in items:
+            items.append(copy.deepcopy(change.value))
+    elif change.kind == 'item_removed':
+        parent[key].remove(change.value)
+
+
+def is_reflected_in(change: Change, merged: Dict[str, Any]) -> bool:
+    value = get_at(merged, change.path)
+    if change.kind in ('added', 'changed'):
+        return value == change.value
+    if change.kind == 'removed':
+        return value is _MISSING
+    if change.kind == 'item_added':
+        return isinstance(value, list) and change.value in value
+    return not isinstance(value, list) or change.value not in value
+
+
+def print_changes(changes: List[Change], numbered: bool = False):
+    groups: Dict[KeyPath, List[int]] = {}
+    for i, change in enumerate(changes):
+        groups.setdefault(change.group, []).append(i)
+
+    for group, indexes in groups.items():
+        print(f"\n{'.'.join(group) or '(root)'}", file=sys.stderr)
+        for i in indexes:
+            prefix = f"{i + 1:>3}. " if numbered else "  "
+            print(f"{prefix}{changes[i].describe()}", file=sys.stderr)
+
+
+def prompt(message: str) -> str:
+    """Read a line from the user, treating Ctrl-D as quit."""
+    try:
+        return input(message).strip().lower()
+    except EOFError:
+        print(file=sys.stderr)
+        return 'q'
+
+
+def resolve_changes(changes: List[Change], targets: List[Path], in_merge: List[Path]) -> Optional[Tuple[Dict[Path, Dict[str, Any]], List[Change]]]:
+    """Let the user move each change into a settings file or ignore it.
+
+    Edits are kept in memory until every change is resolved, so quitting part
+    way through leaves all files untouched. Returns the edited files and the
+    applied changes, or None if the user quit.
+    """
+    file_data = {path: copy.deepcopy(load_json_file(path)) for path in targets}
+    edited: Dict[Path, Dict[str, Any]] = {}
+    applied: List[Change] = []
+    pending = list(changes)
+
+    while pending:
+        print("\nChanges in settings.json that are not in the spec:", file=sys.stderr)
+        print_changes(pending, numbered=True)
+        choice = prompt("\nSelect a change to resolve (number), or q to quit without writing: ")
+        if choice == 'q':
+            return None
+        if not choice.isdigit() or not 1 <= int(choice) <= len(pending):
+            print(f"Invalid choice: {choice}", file=sys.stderr)
+            continue
+        change = pending[int(choice) - 1]
+
+        options = [path for path in targets if can_apply(change, file_data[path])]
+        print(f"\n{'.'.join(change.group) or '(root)'}: {change.describe()}", file=sys.stderr)
+        for i, path in enumerate(options, 1):
+            note = "" if path in in_merge else "  (not in this merge)"
+            print(f"{i:>3}. {path.name}{note}", file=sys.stderr)
+        print("  i. ignore (drop the change from settings.json)", file=sys.stderr)
+        print("  b. back", file=sys.stderr)
+
+        choice = prompt("Apply to: ")
+        if choice == 'b':
+            continue
+        if choice == 'i':
+            pending.remove(change)
+        elif choice.isdigit() and 1 <= int(choice) <= len(options):
+            target = options[int(choice) - 1]
+            apply_change(change, file_data[target])
+            edited[target] = file_data[target]
+            applied.append(change)
+            pending.remove(change)
+        else:
+            print(f"Invalid choice: {choice}", file=sys.stderr)
+
+    return edited, applied
+
+
+def check_for_modifications(output_path: Path, new_merged: Dict[str, Any], targets: List[Path],
+                            in_merge: List[Path], verbose: bool = False) -> Dict[str, Any]:
     """Check if settings.json has been modified compared to settings.json.spec.
 
     If settings.json differs from the spec but matches the newly merged result,
     the change is accepted (the manual edit aligns with what would be generated).
+    Otherwise the user resolves each change interactively, and the merge is
+    redone with their edits. Returns the merged settings to write.
     """
     spec_file_path = output_path.parent / f"{output_path.name}.spec"
 
@@ -91,13 +282,13 @@ def check_for_modifications(output_path: Path, new_merged: Dict[str, Any], verbo
     if not spec_file_path.exists():
         if verbose:
             print("No spec file found, skipping modification check", file=sys.stderr)
-        return
+        return new_merged
 
     # If settings.json doesn't exist, no check needed
     if not output_path.exists():
         if verbose:
             print("No settings.json found, skipping modification check", file=sys.stderr)
-        return
+        return new_merged
 
     # Load both files
     try:
@@ -111,35 +302,67 @@ def check_for_modifications(output_path: Path, new_merged: Dict[str, Any], verbo
 
     # If current matches spec, nothing to worry about
     if current_settings == spec_settings:
-        return
+        return new_merged
 
     # Settings diverged from spec — check if the new merge produces the same result
     if current_settings == new_merged:
         if verbose:
             print("settings.json was modified but matches the new merged result, proceeding", file=sys.stderr)
-        return
+        return new_merged
 
-    print("\nERROR: settings.json has been modified!", file=sys.stderr)
-    print("\nThe current settings.json differs from settings.json.spec.", file=sys.stderr)
-    print("Any settings that should persist should be added to the base settings files.", file=sys.stderr)
-    print("\nDiff (- spec, + current):", file=sys.stderr)
+    changes = find_changes(spec_settings, current_settings)
+    if not changes:
+        if verbose:
+            print("settings.json differs from the spec only in list order, proceeding", file=sys.stderr)
+        return new_merged
 
-    # Generate visual diff
-    spec_json = json.dumps(spec_settings, indent=2, sort_keys=True).splitlines(keepends=True)
-    current_json = json.dumps(current_settings, indent=2, sort_keys=True).splitlines(keepends=True)
+    if not sys.stdin.isatty():
+        print("\nERROR: settings.json has been modified!", file=sys.stderr)
+        print("Any settings that should persist should be added to the base or profile settings files.", file=sys.stderr)
+        print("Run merge-settings from a terminal to move or ignore these changes:", file=sys.stderr)
+        print_changes(changes)
+        sys.exit(1)
 
-    diff = difflib.unified_diff(
-        spec_json,
-        current_json,
-        fromfile='settings.json.spec',
-        tofile='settings.json',
-        lineterm=''
-    )
+    resolved = resolve_changes(changes, targets, in_merge)
+    if resolved is None:
+        print("Quit without writing any files.", file=sys.stderr)
+        sys.exit(1)
+    edited, applied = resolved
 
-    for line in diff:
-        print(line, file=sys.stderr)
+    for path, data in edited.items():
+        write_json(path, data)
+        print(f"Updated: {path}", file=sys.stderr)
 
-    sys.exit(1)
+    merged = merge_files(in_merge, verbose=False)
+    for change in applied:
+        if not is_reflected_in(change, merged):
+            print(f"Warning: {'.'.join(change.path)} is set by another file in this merge, "
+                  "so the merged settings don't include this change", file=sys.stderr)
+    return merged
+
+
+def write_json(file_path: Path, data: Dict[str, Any]):
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')  # Add trailing newline
+
+
+def merge_files(paths: List[Path], verbose: bool = False) -> Dict[str, Any]:
+    """Merge settings files in order. The first file is the base and must exist."""
+    merged = load_json_file(paths[0], verbose=verbose)
+    if not merged:
+        print(f"Error: Base settings file not found or empty: {paths[0]}", file=sys.stderr)
+        sys.exit(1)
+
+    for file_path in paths[1:]:
+        settings = load_json_file(file_path, verbose=verbose)
+        if settings:
+            merged = deep_merge(merged, settings)
+            if verbose:
+                print(f"Merged: {file_path.name}", file=sys.stderr)
+        elif verbose:
+            print(f"Skipped (not found): {file_path.name}", file=sys.stderr)
+    return merged
 
 
 def save_json_file(file_path: Path, data: Dict[str, Any], dry_run: bool = False, verbose: bool = False):
@@ -153,18 +376,14 @@ def save_json_file(file_path: Path, data: Dict[str, Any], dry_run: bool = False,
         # Ensure parent directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=2)
-            f.write('\n')  # Add trailing newline
+        write_json(file_path, data)
 
         if verbose:
             print(f"Wrote merged settings to: {file_path}", file=sys.stderr)
 
         # Also save a .spec file with identical content
         spec_file_path = file_path.parent / f"{file_path.name}.spec"
-        with open(spec_file_path, 'w') as f:
-            json.dump(data, f, indent=2)
-            f.write('\n')  # Add trailing newline
+        write_json(spec_file_path, data)
 
         if verbose:
             print(f"Wrote spec file to: {spec_file_path}", file=sys.stderr)
@@ -181,6 +400,9 @@ def main():
 Examples:
   # Use a profile (merges base with settings.personal.json)
   merge-settings --profile personal
+
+  # Use several profiles, applied in the order given
+  merge-settings -p personal -p ev
 
   # Just output base settings
   merge-settings --profile base
@@ -216,7 +438,9 @@ Examples:
     parser.add_argument(
         '-p', '--profile',
         type=str,
-        help='Profile name (e.g., personal, wealthsimple). Will merge settings.<profile>.json with base'
+        action='append',
+        help='Profile name (e.g., personal, wealthsimple). Merges settings.<profile>.json over base. '
+             'Repeat to apply several profiles in order'
     )
     parser.add_argument(
         '--dry-run',
@@ -248,13 +472,12 @@ Examples:
     files_to_merge: List[Path] = []
     
     if args.profile:
-        if args.profile == 'base':
-            # Just output base settings, no additional merging
-            pass
-        else:
-            # Find settings.<profile>.json in same directory as base
-            profile_file = base_path.parent / f"settings.{args.profile}.json"
-            files_to_merge.append(profile_file)
+        # Profile files live next to base; "base" alone means no additional merging
+        files_to_merge = [
+            base_path.parent / f"settings.{profile}.json"
+            for profile in args.profile
+            if profile != 'base'
+        ]
     else:
         # Use explicitly provided files
         files_to_merge = [expand_path(f) for f in args.files]
@@ -262,35 +485,24 @@ Examples:
     if args.verbose:
         print("=== Merge Settings ===", file=sys.stderr)
         print(f"Base:   {base_path}", file=sys.stderr)
-        if args.profile == 'base':
+        if args.profile and not files_to_merge:
             print("Profile: base (no additional merging)", file=sys.stderr)
         elif args.profile:
-            print(f"Profile: {args.profile}", file=sys.stderr)
+            print(f"Profiles: {', '.join(args.profile)}", file=sys.stderr)
         for i, f in enumerate(files_to_merge, 1):
             print(f"File {i}:  {f}", file=sys.stderr)
         print(f"Output: {output_path}", file=sys.stderr)
         print("", file=sys.stderr)
 
-    # Load base file
-    merged = load_json_file(base_path, verbose=args.verbose)
-
-    if not merged:
-        print(f"Error: Base settings file not found or empty: {base_path}", file=sys.stderr)
-        sys.exit(1)
-
-    # Merge additional files in order
-    for file_path in files_to_merge:
-        settings = load_json_file(file_path, verbose=args.verbose)
-        if settings:
-            merged = deep_merge(merged, settings)
-            if args.verbose:
-                print(f"Merged: {file_path.name}", file=sys.stderr)
-        elif args.verbose:
-            print(f"Skipped (not found): {file_path.name}", file=sys.stderr)
+    in_merge = [base_path] + files_to_merge
+    merged = merge_files(in_merge, verbose=args.verbose)
 
     # Check for modifications before saving
     if not args.dry_run:
-        check_for_modifications(output_path, merged, verbose=args.verbose)
+        # Changes can also go to profiles outside this merge, e.g. to move a setting to the work profile
+        other_profiles = sorted(p for p in base_path.parent.glob('settings.*.json') if p not in in_merge)
+        merged = check_for_modifications(output_path, merged, in_merge + other_profiles, in_merge,
+                                         verbose=args.verbose)
 
     # Save or print result
     if args.verbose:
