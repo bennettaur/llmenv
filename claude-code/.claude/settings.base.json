@@ -52,7 +52,13 @@
       "Bash(yarn:*)",
       "Bash(eslint:*)",
       "Bash(prettier:*)",
-      "Bash(pnpm:*)"
+      "Bash(pnpm:*)",
+      "Bash(mise exec -- bun test:*)",
+      "Bash(mise exec -- bun run:*)",
+      "Bash(mise exec -- bunx biome:*)",
+      "Bash(mise exec -- git commit:*)",
+      "Bash(bun test:*)",
+      "Bash(gh pr edit:*)"
     ],
     "deny": [
       "Read(.env*)",
@@ -140,43 +146,15 @@
       "Bash(mise dc-nuke)"
     ]
   },
+  "model": "opus",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "autoCompactWindow": "auto"
+    }
+  },
   "env": {
     "LLMENV_ROOT": "/Users/mbennett/dev/bennettaur/llmenv",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/validate-git-hooks.py",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay $(./random-file.sh notification-sound/need_user_input)"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay $(./random-file.sh notification-sound/need_user_input)"
-          }
-        ]
-      }
-    ]
   },
   "statusLine": {
     "type": "command",
@@ -204,17 +182,28 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "network": {
-      "allowedDomains": [
-        "github.com",
-        "*.github.com",
-        "*.atlassian.com"
+    "enableWeakerNetworkIsolation": true,
+    "filesystem": {
+      "allowRead": [
+        "~/.config/mise",
+        "~/.local/share/mise",
+        "~/.bun",
+        "~/.gitconfig"
+      ],
+      "allowWrite": [
+        "~/.local/state/mise",
+        "~/Library/Caches/mise",
+        "~/.bun/install/cache"
       ]
     },
-    "allowUnixSockets": [
-      "-- used by nx Daemon --",
-      "/private/tmp/claude/**"
-    ]
+    "network": {
+      "allowedDomains": ["github.com", "*.github.com", "*.atlassian.com"],
+      "allowUnixSockets": [
+        "/private/tmp/claude/**",
+        "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+      ],
+      "allowLocalBinding": true
+    }
   },
   "theme": "dark",
   "tui": "fullscreen",

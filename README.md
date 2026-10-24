@@ -148,26 +148,30 @@ merge-settings --verbose
 ### merge-settings Command
 
 ```bash
-# Basic merge with defaults
-merge-settings
+# Merge base with settings.personal.json
+merge-settings -p personal
+
+# Apply several profiles in order: base, then personal, then ev
+merge-settings -p personal -p ev
 
 # Verbose output showing merge operations
-merge-settings --verbose
+merge-settings -p personal --verbose
 
 # Dry run to preview merged output
-merge-settings --dry-run
+merge-settings -p personal --dry-run
 
-# Custom file locations
-merge-settings -b ~/.claude/settings.base.json -p ~/.claude/settings.personal.json
+# Merge explicit files over base
+merge-settings custom1.json custom2.json
 ```
 
 **Options:**
-- `-o, --output`: Output file (default: `~/.claude/settings.json`)
-- `-b, --base`: Base settings file (default: `~/.claude/settings.base.json`)
-- `-p, --personal`: Personal settings file (default: `~/.claude/settings.personal.json`)
-- `-w, --work`: Work settings file (default: `~/.claude/settings.wealthsimple.json`)
+- `-p, --profile`: Merge `settings.<profile>.json` (from the base file's directory) over base. Repeat to apply several profiles in order. `-p base` merges nothing over base.
+- `-o, --output`: Output file (default: `./settings.json`)
+- `-b, --base`: Base settings file (default: `./settings.base.json`)
 - `--dry-run`: Print merged output without writing
 - `-v, --verbose`: Show detailed merge operations
+
+**Edits to settings.json:** each run also writes `settings.json.spec`. If `settings.json` has been edited by hand (or by Claude Code) since then, `merge-settings` lists each changed setting by its path, grouped under its parent block. From a terminal you pick a change, then either pick a `settings.*.json` file to save it to or ignore it. Nothing is written until every change is resolved, and `q` quits without touching any file. Run without a terminal, it prints the changes and exits with an error.
 
 ### Updating Configuration
 
