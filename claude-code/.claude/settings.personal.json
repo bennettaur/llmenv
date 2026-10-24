@@ -1,1 +1,4 @@
-{}
+{
+  "agentPushNotifEnabled": true,
+  "inputNeededNotifEnabled": true
+}
