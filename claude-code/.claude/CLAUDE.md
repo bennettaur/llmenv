@@ -24,6 +24,12 @@ Only change what the task needs. Mention other problems you notice instead of fi
 
 When code style goals conflict, prefer consistency with the existing file, then readability, then performance, then conciseness.
 
+## Sub-agents and teammates
+
+Sub-agents and teammates inherit your model unless you set one, and running every one on Opus uses a lot of my usage. When a sub-agent's or teammate's task is clearly straightforward, set `model: "sonnet"`. Straightforward means the steps are clear and the work needs little judgment: finding files or code, gathering facts, running commands and reporting the output, or making a mechanical edit across many files.
+
+Keep the default model for work that needs real judgment: design and planning, debugging an unclear failure, security review, or anything where a subtle mistake is expensive. If you're unsure, use the default model.
+
 ## Finishing work
 
 When you've done what the session asked for, take it to a draft PR without waiting to be told:

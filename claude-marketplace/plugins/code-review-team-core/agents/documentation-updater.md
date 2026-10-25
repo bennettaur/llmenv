@@ -1,6 +1,7 @@
 ---
 name: documentation-updater
 description: "Review whether project documentation accurately reflects the current branch's code changes."
+model: sonnet
 skills:
   - documentation-updater
 ---

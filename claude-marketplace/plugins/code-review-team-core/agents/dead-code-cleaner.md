@@ -1,6 +1,7 @@
 ---
 name: dead-code-cleaner
 description: "Identify dead code, unused functionality, and cleanup opportunities in the current branch's changes."
+model: sonnet
 skills:
   - dead-code-cleaner
 ---
