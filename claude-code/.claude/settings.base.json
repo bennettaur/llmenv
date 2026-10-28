@@ -58,7 +58,8 @@
       "Bash(mise exec -- bunx biome:*)",
       "Bash(mise exec -- git commit:*)",
       "Bash(bun test:*)",
-      "Bash(gh pr edit:*)"
+      "Bash(gh pr edit:*)",
+      "Bash(openssl rand -hex 8)"
     ],
     "deny": [
       "Read(.env*)",
