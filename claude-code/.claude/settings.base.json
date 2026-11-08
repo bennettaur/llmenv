@@ -59,7 +59,13 @@
       "Bash(mise exec -- git commit:*)",
       "Bash(bun test:*)",
       "Bash(gh pr edit:*)",
-      "Bash(openssl rand -hex 8)"
+      "Bash(gh pr ready:*)",
+      "Bash(git clean)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git push *--force*)",
+      "Bash(git push * +*)",
+      "Bash(docker stop:*)"
     ],
     "deny": [
       "Read(.env*)",
@@ -121,13 +127,7 @@
       "Bash(node -e:*)"
     ],
     "ask": [
-      "Bash(git clean:*)",
       "Bash(git reset --hard:*)",
-      "Bash(git push -f*)",
-      "Bash(git push * -f*)",
-      "Bash(git push *--force*)",
-      "Bash(git push * +*)",
-      "Bash(docker stop:*)",
       "Bash(docker kill:*)",
       "Bash(docker-compose down:*)",
       "Bash(rm -r:*)",
@@ -198,7 +198,11 @@
       ]
     },
     "network": {
-      "allowedDomains": ["github.com", "*.github.com", "*.atlassian.com"],
+      "allowedDomains": [
+        "github.com",
+        "*.github.com",
+        "*.atlassian.com"
+      ],
       "allowUnixSockets": [
         "/private/tmp/claude/**",
         "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
@@ -208,7 +212,7 @@
   },
   "theme": "dark",
   "tui": "fullscreen",
-  "autoCompactEnabled": false,
+  "autoCompactEnabled": true,
   "teammateMode": "tmux",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
