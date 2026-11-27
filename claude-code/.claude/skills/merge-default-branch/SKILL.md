@@ -144,5 +144,6 @@ Then report to the user:
 ## Notes
 
 - This skill merges and pushes; it does not rebase. Skip the push only if the user asked for a local-only merge.
+- To rebase a stack of dependent PRs onto the default branch, use rebase-stack instead.
 - It reads from `origin` (`git fetch`) and writes only to the current branch, locally and on `origin`. It never modifies the default branch.
 - If the merge gets into a state you don't understand, `git merge --abort` is always safe before the merge is committed and returns you to the starting point.
